@@ -1,0 +1,262 @@
+/* ================================
+   PAGE ASSOCIATION
+================================ */
+
+.association-page {
+  min-height: 100vh;
+  background: #f5f8f5;
+  color: #26352a;
+}
+
+/* ================================
+   HEADER
+================================ */
+
+.association-header {
+  padding: 80px 8%;
+  background: linear-gradient(
+    135deg,
+    #1b5e20,
+    #2e7d32
+  );
+  color: white;
+}
+
+.association-label {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+  opacity: 0.9;
+}
+
+.association-header h1 {
+  margin: 0 0 15px;
+  font-size: 48px;
+  font-weight: 800;
+}
+
+.association-header p {
+  margin: 8px 0;
+  font-size: 20px;
+}
+
+.association-header .subtitle {
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+/* ================================
+   CONTENU PRINCIPAL
+================================ */
+
+.association-container {
+  width: 84%;
+  max-width: 1200px;
+  margin: 50px auto;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 35px;
+  align-items: start;
+}
+
+/* ================================
+   BOUTONS
+================================ */
+
+.association-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.association-buttons button {
+  border: none;
+  background: white;
+  color: #2e7d32;
+  padding: 17px 20px;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s ease;
+}
+
+.association-buttons button:hover {
+  background: #e8f5e9;
+  transform: translateX(5px);
+}
+
+.association-buttons button.active {
+  background: #2e7d32;
+  color: white;
+  transform: translateX(5px);
+}
+
+/* ================================
+   CONTENU
+================================ */
+
+.association-content {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  min-height: 390px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.association-content h2 {
+  margin-top: 0;
+  margin-bottom: 25px;
+  color: #1b5e20;
+  font-size: 30px;
+  border-bottom: 3px solid #81c784;
+  padding-bottom: 12px;
+}
+
+.content-text {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #4b554e;
+}
+
+.content-text p {
+  margin-bottom: 20px;
+}
+
+.content-text ul {
+  padding-left: 25px;
+}
+
+.content-text li {
+  margin-bottom: 12px;
+}
+
+/* ================================
+   MOTTO
+================================ */
+
+.motto {
+  padding: 18px 25px;
+  background: #e8f5e9;
+  border-left: 5px solid #2e7d32;
+  border-radius: 8px;
+  color: #1b5e20;
+  font-size: 19px;
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* ================================
+   DOMAINES
+================================ */
+
+.domaines-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.domaines-grid div {
+  background: #f1f8f2;
+  padding: 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  color: #2e7d32;
+  border: 1px solid #dcebdc;
+  transition: all 0.25s ease;
+}
+
+.domaines-grid div:hover {
+  background: #e8f5e9;
+  transform: translateY(-3px);
+}
+
+/* ================================
+   CONTACT
+================================ */
+
+.association-contact {
+  width: 84%;
+  max-width: 1200px;
+  margin: 0 auto 60px;
+  padding: 35px;
+  background: #1b5e20;
+  color: white;
+  border-radius: 15px;
+  text-align: center;
+}
+
+.association-contact h2 {
+  margin-top: 0;
+  font-size: 28px;
+}
+
+.association-contact p {
+  margin: 10px 0;
+  font-size: 16px;
+}
+
+/* ================================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 900px) {
+  .association-container {
+    grid-template-columns: 1fr;
+  }
+
+  .association-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .association-buttons button:hover,
+  .association-buttons button.active {
+    transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .association-header {
+    padding: 55px 6%;
+  }
+
+  .association-header h1 {
+    font-size: 36px;
+  }
+
+  .association-header p {
+    font-size: 17px;
+  }
+
+  .association-container {
+    width: 90%;
+    margin: 30px auto;
+  }
+
+  .association-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .association-content {
+    padding: 25px;
+  }
+
+  .association-content h2 {
+    font-size: 25px;
+  }
+
+  .domaines-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .association-contact {
+    width: 90%;
+    padding: 25px;
+  }
+}

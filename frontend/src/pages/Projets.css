@@ -1,0 +1,245 @@
+/* ================================
+   PAGE PROJETS
+================================ */
+
+.projets-page {
+    min-height: 100vh;
+    background: #f5f8f5;
+    color: #26352a;
+  }
+  
+  /* ================================
+     HEADER
+  ================================ */
+  
+  .projets-header {
+    padding: 80px 8%;
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    color: white;
+  }
+  
+  .projets-header span {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+    opacity: 0.9;
+  }
+  
+  .projets-header h1 {
+    margin: 0 0 15px;
+    font-size: 48px;
+    font-weight: 800;
+  }
+  
+  .projets-header p {
+    max-width: 800px;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.7;
+    opacity: 0.95;
+  }
+  
+  /* ================================
+     CONTENEUR
+  ================================ */
+  
+  .projets-container {
+    width: 84%;
+    max-width: 1200px;
+    margin: 50px auto 70px;
+  }
+  
+  /* ================================
+     INTRODUCTION
+  ================================ */
+  
+  .projets-intro {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 45px;
+  }
+  
+  .projets-intro h2 {
+    margin: 0 0 15px;
+    color: #1b5e20;
+    font-size: 32px;
+  }
+  
+  .projets-intro p {
+    margin: 0;
+    color: #5b665e;
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  
+  /* ================================
+     GRID
+  ================================ */
+  
+  .projets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  
+  /* ================================
+     CARD
+  ================================ */
+  
+  .projet-card {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .projet-card:hover {
+    transform: translateY(-7px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.13);
+  }
+  
+  /* ================================
+     IMAGE
+  ================================ */
+  
+  .projet-image-container {
+    width: 100%;
+    height: 210px;
+    overflow: hidden;
+  }
+  
+  .projet-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+  
+  .projet-card:hover .projet-image {
+    transform: scale(1.05);
+  }
+  
+  .projet-no-image {
+    height: 210px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8f5e9;
+    font-size: 55px;
+  }
+  
+  /* ================================
+     CONTENU CARD
+  ================================ */
+  
+  .projet-content {
+    padding: 24px;
+  }
+  
+  .projet-date {
+    display: inline-block;
+    margin-bottom: 10px;
+    color: #66a36a;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  
+  .projet-content h3 {
+    margin: 0 0 12px;
+    color: #1b5e20;
+    font-size: 22px;
+    line-height: 1.3;
+  }
+  
+  .projet-content p {
+    margin: 0;
+    color: #5b665e;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  
+  /* ================================
+     FOOTER CARD
+  ================================ */
+  
+  .projet-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 22px;
+    padding-top: 15px;
+    border-top: 1px solid #e5ece6;
+    color: #2e7d32;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  
+  /* ================================
+     MESSAGES
+  ================================ */
+  
+  .projets-message {
+    padding: 40px;
+    background: white;
+    border-radius: 12px;
+    text-align: center;
+    color: #5b665e;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+  }
+  
+  .projets-message.error {
+    color: #c62828;
+  }
+  
+  /* ================================
+     RESPONSIVE TABLETTE
+  ================================ */
+  
+  @media (max-width: 950px) {
+    .projets-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  
+    .projets-header h1 {
+      font-size: 40px;
+    }
+  }
+  
+  /* ================================
+     RESPONSIVE MOBILE
+  ================================ */
+  
+  @media (max-width: 600px) {
+    .projets-header {
+      padding: 55px 6%;
+    }
+  
+    .projets-header h1 {
+      font-size: 34px;
+    }
+  
+    .projets-header p {
+      font-size: 16px;
+    }
+  
+    .projets-container {
+      width: 90%;
+      margin-top: 35px;
+    }
+  
+    .projets-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .projets-intro h2 {
+      font-size: 27px;
+    }
+  
+    .projet-content {
+      padding: 20px;
+    }
+  }
