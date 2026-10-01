@@ -5,6 +5,7 @@ from routes.projets import projets_bp
 from routes.messages import messages_bp
 from routes.dashboard import dashboard_bp
 from routes.partenaires import partenaires_bp
+from routes.auth import auth_bp
 import os
 
 
@@ -62,6 +63,11 @@ app.register_blueprint(dashboard_bp)
 
 app.register_blueprint(partenaires_bp)
 
+# ==========================
+# Routes Auth
+# ==========================
+
+app.register_blueprint(auth_bp)
 
 # ==========================
 # Route principale
