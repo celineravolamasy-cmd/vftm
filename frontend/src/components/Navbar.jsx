@@ -1,6 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Navbar() {
+  const navigate = useNavigate();
+
   return (
     <nav className="navbar">
       <div className="logo">
@@ -15,7 +17,10 @@ function Navbar() {
         <li><Link to="/contact">Contact</Link></li>
       </ul>
 
-      <button className="login-btn">
+      <button
+        className="login-btn"
+        onClick={() => navigate("/login")}
+      >
         Se connecter
       </button>
     </nav>
