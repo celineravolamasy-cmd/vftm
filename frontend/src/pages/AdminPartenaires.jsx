@@ -23,7 +23,7 @@ function AdminPartenaires() {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:5000/partenaires"
+        "https://vftm.onrender.com/partenaires"
       );
 
       if (!response.ok) {
@@ -61,7 +61,7 @@ function AdminPartenaires() {
     try {
 
       const response = await fetch(
-        `http://127.0.0.1:5000/partenaires/${id}`,
+        `https://vftm.onrender.com/partenaires/${id}`,
         {
           method: "DELETE"
         }
@@ -179,7 +179,7 @@ function AdminPartenaires() {
                       {partenaire.logo ? (
 
                         <img
-                          src={`http://127.0.0.1:5000/uploads/${partenaire.logo}`}
+                          src={`https://vftm.onrender.com/uploads/${partenaire.logo}`}
                           alt={partenaire.nom}
                           style={{
                             width: "80px",

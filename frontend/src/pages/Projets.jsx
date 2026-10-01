@@ -8,7 +8,7 @@ function Projets() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/projets")
+    fetch("https://vftm.onrender.com/projets")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Erreur lors du chargement des projets");
@@ -80,7 +80,7 @@ function Projets() {
                 {projet.image ? (
                   <div className="projet-image-container">
                     <img
-                      src={`http://127.0.0.1:5000/uploads/${projet.image}`}
+                      src={`https://vftm.onrender.com/uploads/${projet.image}`}
                       alt={projet.titre}
                       className="projet-image"
                     />

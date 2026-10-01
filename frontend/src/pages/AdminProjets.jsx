@@ -16,7 +16,7 @@ function AdminProjets() {
   const chargerProjets = async () => {
     try {
       const response = await fetch(
-        "http://127.0.0.1:5000/projets"
+        "https://vftm.onrender.com/projets"
       );
 
       const data = await response.json();
@@ -38,7 +38,7 @@ function AdminProjets() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:5000/projets/${id}`,
+        `https://vftm.onrender.com/projets/${id}`,
         {
           method: "DELETE",
         }
@@ -105,7 +105,7 @@ function AdminProjets() {
                 <td>
                   {projet.image && (
                     <img
-                      src={`http://127.0.0.1:5000/uploads/${projet.image}`}
+                      src={`https://vftm.onrender.com/uploads/${projet.image}`}
                       alt={projet.titre}
                       style={{
                         width: "100px",

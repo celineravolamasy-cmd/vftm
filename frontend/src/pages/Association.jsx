@@ -20,7 +20,7 @@ function Association() {
     setLoadingPartenaires(true);
     setErrorPartenaires("");
 
-    fetch("http://127.0.0.1:5000/partenaires")
+    fetch("https://vftm.onrender.com/partenaires")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Erreur lors de la récupération des partenaires");
@@ -242,7 +242,7 @@ function Association() {
 
                       {partenaire.logo ? (
                         <img
-                          src={`http://127.0.0.1:5000/uploads/${partenaire.logo}`}
+                          src={`https://vftm.onrender.com/uploads/${partenaire.logo}`}
                           alt={partenaire.nom}
                         />
                       ) : (

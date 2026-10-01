@@ -52,8 +52,8 @@ function Home() {
     const chargerDonnees = async () => {
       try {
         const [actualitesResponse, projetsResponse] = await Promise.all([
-          fetch("http://127.0.0.1:5000/actualites"),
-          fetch("http://127.0.0.1:5000/projets"),
+          fetch("https://vftm.onrender.com/actualites"),
+          fetch("https://vftm.onrender.com/projets"),
         ]);
 
         if (actualitesResponse.ok) {
@@ -205,7 +205,7 @@ function Home() {
               <article className="content-card" key={actu.id}>
                 {actu.image && (
                   <img
-                    src={`http://127.0.0.1:5000/uploads/${actu.image}`}
+                    src={`https://vftm.onrender.com/uploads/${actu.image}`}
                     alt={actu.titre}
                   />
                 )}
@@ -240,7 +240,7 @@ function Home() {
               <article className="content-card" key={projet.id}>
                 {projet.image && (
                   <img
-                    src={`http://127.0.0.1:5000/uploads/${projet.image}`}
+                    src={`https://vftm.onrender.com/uploads/${projet.image}`}
                     alt={projet.titre}
                   />
                 )}
@@ -279,3 +279,4 @@ function Home() {
 }
 
 export default Home;
+

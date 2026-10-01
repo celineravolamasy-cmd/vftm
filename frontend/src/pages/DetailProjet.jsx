@@ -10,7 +10,7 @@ function DetailProjet() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:5000/projets/${id}`)
+    fetch(`https://vftm.onrender.com/projets/${id}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Projet introuvable");
@@ -93,7 +93,7 @@ function DetailProjet() {
             <div className="detail-projet-image">
 
               <img
-                src={`http://127.0.0.1:5000/uploads/${projet.image}`}
+                src={`https://vftm.onrender.com/uploads/${projet.image}`}
                 alt={projet.titre}
               />
 

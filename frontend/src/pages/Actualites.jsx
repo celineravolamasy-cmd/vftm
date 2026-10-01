@@ -6,7 +6,7 @@ function Actualites() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/actualites")
+    fetch("https://vftm.onrender.com/actualites")
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -64,7 +64,7 @@ function Actualites() {
             {/* IMAGE */}
             {actualite.image && (
               <img
-                src={`http://127.0.0.1:5000/uploads/${actualite.image}`}
+                src={`https://vftm.onrender.com/uploads/${actualite.image}`}
                 alt={actualite.titre}
                 className="actualite-image"
               />

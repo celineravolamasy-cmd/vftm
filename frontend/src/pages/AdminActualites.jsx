@@ -20,7 +20,7 @@ function AdminActualites() {
   const chargerActualites = async () => {
     try {
       const response = await fetch(
-        "http://127.0.0.1:5000/actualites"
+        "https://vftm.onrender.com/actualites"
       );
 
       if (!response.ok) {
@@ -51,7 +51,7 @@ function AdminActualites() {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:5000/actualites/${id}`,
+        `https://vftm.onrender.com/actualites/${id}`,
         {
           method: "DELETE",
         }
@@ -179,7 +179,7 @@ function AdminActualites() {
                     {actu.image ? (
 
                       <img
-                        src={`http://127.0.0.1:5000/uploads/${actu.image}`}
+                        src={`https://vftm.onrender.com/uploads/${actu.image}`}
                         alt={actu.titre}
                         style={{
                           width: "100px",

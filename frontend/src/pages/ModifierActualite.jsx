@@ -20,7 +20,7 @@ function ModifierActualite() {
   const chargerActualite = async () => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:5000/actualites/${id}`
+        `https://vftm.onrender.com/actualites/${id}`
       );
 
       if (!response.ok) {
@@ -61,7 +61,7 @@ function ModifierActualite() {
       }
 
       const response = await fetch(
-        `http://127.0.0.1:5000/actualites/${id}`,
+        `https://vftm.onrender.com/actualites/${id}`,
         {
           method: "PUT",
           body: formData,
@@ -128,7 +128,7 @@ function ModifierActualite() {
           <div style={{ marginBottom: "15px" }}>
 
             <img
-              src={`http://127.0.0.1:5000/uploads/${ancienneImage}`}
+              src={`https://vftm.onrender.com/uploads/${ancienneImage}`}
               alt="Image actuelle"
               style={{
                 width: "200px",

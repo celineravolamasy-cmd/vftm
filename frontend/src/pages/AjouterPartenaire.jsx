@@ -35,7 +35,7 @@ function AjouterPartenaire() {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:5000/partenaires",
+        "https://vftm.onrender.com/partenaires",
         {
           method: "POST",
           body: formData

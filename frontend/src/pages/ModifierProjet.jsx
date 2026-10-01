@@ -25,7 +25,7 @@ function ModifierProjet() {
   const chargerProjet = async () => {
     try {
       const response = await fetch(
-        `http://127.0.0.1:5000/projets/${id}`
+        `https://vftm.onrender.com/projets/${id}`
       );
 
       if (!response.ok) {
@@ -68,7 +68,7 @@ function ModifierProjet() {
       }
 
       const response = await fetch(
-        `http://127.0.0.1:5000/projets/${id}`,
+        `https://vftm.onrender.com/projets/${id}`,
         {
           method: "PUT",
           body: formData,
@@ -168,7 +168,7 @@ function ModifierProjet() {
         {ancienneImage && (
           <div style={{ marginBottom: "15px" }}>
             <img
-              src={`http://127.0.0.1:5000/uploads/${ancienneImage}`}
+              src={`https://vftm.onrender.com/uploads/${ancienneImage}`}
               alt="Image actuelle"
               style={{
                 width: "200px",

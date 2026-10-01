@@ -31,7 +31,7 @@ function ModifierPartenaire() {
     try {
 
       const response = await fetch(
-        `http://127.0.0.1:5000/partenaires/${id}`
+        `https://vftm.onrender.com/partenaires/${id}`
       );
 
       if (!response.ok) {
@@ -82,7 +82,7 @@ function ModifierPartenaire() {
     try {
 
       const response = await fetch(
-        `http://127.0.0.1:5000/partenaires/${id}`,
+        `https://vftm.onrender.com/partenaires/${id}`,
         {
           method: "PUT",
           body: formData
@@ -180,7 +180,7 @@ function ModifierPartenaire() {
             <br />
 
             <img
-              src={`http://127.0.0.1:5000/uploads/${ancienLogo}`}
+              src={`https://vftm.onrender.com/uploads/${ancienLogo}`}
               alt={nom}
               style={{
                 width: "120px",

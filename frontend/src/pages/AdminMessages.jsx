@@ -22,7 +22,7 @@ function AdminMessages() {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:5000/messages"
+        "https://vftm.onrender.com/messages"
       );
 
       if (!response.ok) {
@@ -61,7 +61,7 @@ function AdminMessages() {
     try {
 
       const response = await fetch(
-        `http://127.0.0.1:5000/messages/${id}`,
+        `https://vftm.onrender.com/messages/${id}`,
         {
           method: "DELETE"
         }
