@@ -26,8 +26,13 @@ def get_stats():
     cur.execute("SELECT COUNT(*) FROM messages")
     messages = cur.fetchone()[0]
 
+    
+    
     # Nombre de partenaires
-    partenaires = 0
+    cur.execute("SELECT COUNT(*) FROM partenaires")
+    partenaires = cur.fetchone()[0]
+
+
 
     # ==========================
     # Dernières activités
