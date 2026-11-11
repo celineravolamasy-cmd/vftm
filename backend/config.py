@@ -1,5 +1,11 @@
+
 import os
 import psycopg2
+from dotenv import load_dotenv
+
+load_dotenv(
+    os.path.join(os.path.dirname(__file__), ".env")
+)
 
 def get_connection():
     return psycopg2.connect(
@@ -8,5 +14,5 @@ def get_connection():
         user=os.environ["DB_USER"],
         password=os.environ["DB_PASSWORD"],
         port=os.environ.get("DB_PORT", "5432"),
-        sslmode=os.environ.get("DB_SSLMODE", "require")
+        sslmode=os.environ.get("DB_SSLMODE", "prefer")
     )

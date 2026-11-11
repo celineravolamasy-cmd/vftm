@@ -1,4 +1,52 @@
+import API_URL from '../services/api';
 import { useEffect, useState } from "react";
+
+
+function ActualiteCard({ actualite }) {
+  const [indexImage, setIndexImage] = useState(0);
+
+  const images =
+    actualite.images?.length > 0
+      ? actualite.images
+      : actualite.image
+        ? [actualite.image]
+        : [];
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setIndexImage((index) => (index + 1) % images.length);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+  return (
+    <div className="actualite-card">
+      {images.length > 0 && (
+        <img
+          src={`${API_URL}/uploads/${images[indexImage]}`}
+          alt={`${actualite.titre} - Photo ${indexImage + 1}`}
+          className="actualite-image"
+        />
+      )}
+
+      <div className="actualite-content">
+        <h2>{actualite.titre}</h2>
+
+        <p>{actualite.description}</p>
+
+        <small>Date : {actualite.date}</small>
+
+        {images.length > 1 && (
+          <small style={{ display: "block", marginTop: "8px" }}>
+            Photo {indexImage + 1} / {images.length}
+          </small>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Actualites() {
   const [actualites, setActualites] = useState([]);
@@ -6,7 +54,7 @@ function Actualites() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("https://vftm.onrender.com/actualites")
+    fetch(`${API_URL}/actualites`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -29,69 +77,28 @@ function Actualites() {
 
   return (
     <div className="page">
-
       <h1>Nos Actualités</h1>
 
-      <p>
-        Retrouvez toutes les actualités du VFTM.
-      </p>
+      <p>Retrouvez toutes les actualités du VFTM.</p>
 
-      {loading && (
-        <p>Chargement des actualités...</p>
+      {loading && <p>Chargement des actualités...</p>}
+
+      {error && <p>{error}</p>}
+
+      {!loading && !error && actualites.length === 0 && (
+        <p>Aucune actualité disponible pour le moment.</p>
       )}
 
-      {error && (
-        <p>{error}</p>
+      {!loading && !error && (
+        <div className="actualites-list">
+          {actualites.map((actualite) => (
+            <ActualiteCard
+              key={actualite.id}
+              actualite={actualite}
+            />
+          ))}
+        </div>
       )}
-
-      {!loading &&
-        !error &&
-        actualites.length === 0 && (
-          <p>
-            Aucune actualité disponible pour le moment.
-          </p>
-        )}
-
-      <div className="actualites-list">
-
-        {actualites.map((actualite) => (
-
-          <div
-            className="actualite-card"
-            key={actualite.id}
-          >
-
-            {/* IMAGE */}
-            {actualite.image && (
-              <img
-                src={`https://vftm.onrender.com/uploads/${actualite.image}`}
-                alt={actualite.titre}
-                className="actualite-image"
-              />
-            )}
-
-            <div className="actualite-content">
-
-              <h2>
-                {actualite.titre}
-              </h2>
-
-              <p>
-                {actualite.description}
-              </p>
-
-              <small>
-                Date : {actualite.date}
-              </small>
-
-            </div>
-
-          </div>
-
-        ))}
-
-      </div>
-
     </div>
   );
 }

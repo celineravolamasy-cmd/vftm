@@ -1,0 +1,322 @@
+
+/* ==========================================
+   VFTM - GESTION DES MESSAGES
+========================================== */
+
+/* CONTENU ADMIN */
+.admin-page .admin-content {
+  min-width: 0;
+}
+
+/* ==========================================
+   TABLEAU DES MESSAGES
+========================================== */
+
+/* Container */
+.admin-page .actualite-table-container:has(.messages-table) {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+/* Annuler les contraintes du tableau global */
+.admin-page .admin-table.messages-table {
+  width: 100%;
+  min-width: 0;
+  margin-top: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+/* Cellules */
+.admin-page .messages-table th,
+.admin-page .messages-table td {
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px 7px;
+  text-align: center;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+/* ID */
+.admin-page .messages-table th:nth-child(1),
+.admin-page .messages-table td:nth-child(1) {
+  width: 5%;
+}
+
+/* Nom */
+.admin-page .messages-table th:nth-child(2),
+.admin-page .messages-table td:nth-child(2) {
+  width: 9%;
+}
+
+/* Email */
+.admin-page .messages-table th:nth-child(3),
+.admin-page .messages-table td:nth-child(3) {
+  width: 19%;
+}
+
+/* Sujet */
+.admin-page .messages-table th:nth-child(4),
+.admin-page .messages-table td:nth-child(4) {
+  width: 11%;
+}
+
+/* Message */
+.admin-page .messages-table th:nth-child(5),
+.admin-page .messages-table td:nth-child(5) {
+  width: 15%;
+}
+
+/* Date */
+.admin-page .messages-table th:nth-child(6),
+.admin-page .messages-table td:nth-child(6) {
+  width: 23%;
+}
+
+/* Action */
+.admin-page .messages-table th:nth-child(7),
+.admin-page .messages-table td:nth-child(7) {
+  width: 18%;
+  padding-left: 6px;
+  padding-right: 10px;
+}
+
+/* Date */
+.admin-page .messages-table td:nth-child(6) {
+  font-size: 13px;
+  white-space: normal;
+}
+
+/* ==========================================
+   BOUTON CONSULTER
+========================================== */
+
+.message-consulter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 9px 12px;
+  background: #15803d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+}
+
+.message-consulter-btn:hover {
+  background: #166534;
+}
+
+/* ==========================================
+   BOUTON SUPPRIMER
+========================================== */
+
+.admin-page .messages-table .actualite-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 0;
+}
+
+.admin-page .messages-table .btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.admin-page .messages-table .btn-delete svg {
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   FENETRE CONSULTER MESSAGE
+========================================== */
+
+.message-consult-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.message-consult-modal {
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+/* HEADER */
+.message-consult-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 22px 26px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.message-consult-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #166534;
+}
+
+.message-consult-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.message-consult-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+}
+
+.message-consult-close:hover {
+  background: #e5e7eb;
+}
+
+/* CONTENU */
+.message-consult-body {
+  padding: 25px 26px;
+}
+
+.message-consult-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.message-consult-field > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: #15803d;
+}
+
+.message-consult-field strong,
+.message-consult-subject strong,
+.message-consult-text strong {
+  display: block;
+  color: #374151;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.message-consult-field p,
+.message-consult-subject p {
+  margin: 0;
+  color: #111827;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+/* SUJET */
+.message-consult-subject {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+/* MESSAGE COMPLET */
+.message-consult-text {
+  padding: 18px;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 10px;
+}
+
+.message-consult-text p {
+  margin: 10px 0 0;
+  color: #1f2937;
+  font-size: 15px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* FOOTER */
+.message-consult-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 18px 26px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.message-consult-done {
+  padding: 10px 24px;
+  background: #15803d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.message-consult-done:hover {
+  background: #166534;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+
+@media (max-width: 1100px) {
+  .admin-page .admin-table.messages-table {
+    min-width: 850px;
+  }
+}
+
+@media (max-width: 600px) {
+  .message-consult-header,
+  .message-consult-body,
+  .message-consult-footer {
+    padding: 16px;
+  }
+
+  .message-consult-heading h2 {
+    font-size: 18px;
+  }
+}

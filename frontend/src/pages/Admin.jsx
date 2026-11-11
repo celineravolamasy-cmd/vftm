@@ -1,10 +1,18 @@
+import API_URL from '../services/api';
+
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import "./Admin.css";
 
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
 
+
+
 function Admin() {
+
+  const navigate = useNavigate();
 
   const [stats, setStats] = useState({
     actualites: 0,
@@ -15,37 +23,115 @@ function Admin() {
 
   const [activites, setActivites] = useState([]);
 
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState("");
+
+  // ==========================
+  // CHARGER LE DASHBOARD
+  // ==========================
+
   useEffect(() => {
-    chargerDashboard();
-  }, []);
 
-  const chargerDashboard = async () => {
-    try {
-      const response = await fetch(
-        "https://vftm.onrender.com/dashboard/stats"
-      );
+    let actif = true;
 
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement du Dashboard");
+    const chargerDashboard = async () => {
+
+      setChargement(true);
+      setErreur("");
+
+      try {
+
+        const response = await fetch(
+          `${API_URL}/dashboard/stats`,
+          {
+            method: "GET",
+
+            // Envoyer le cookie de session Flask
+            credentials: "include"
+          }
+        );
+
+        if (!actif) return;
+
+        // ==========================
+        // SESSION EXPIREE
+        // ==========================
+
+        if (response.status === 401) {
+
+          localStorage.removeItem("user");
+
+          alert(
+            "Votre session a expiré. Veuillez vous reconnecter."
+          );
+
+          navigate("/login", { replace: true });
+
+          return;
+        }
+
+        if (!response.ok) {
+
+          throw new Error(
+            "Erreur lors du chargement du Dashboard"
+          );
+
+        }
+
+        const data = await response.json();
+
+        if (!actif) return;
+
+        // ==========================
+        // STATISTIQUES
+        // ==========================
+
+        setStats({
+          actualites: data.actualites ?? 0,
+          projets: data.projets ?? 0,
+          partenaires: data.partenaires ?? 0,
+          messages: data.messages ?? 0
+        });
+
+        // ==========================
+        // DERNIERES ACTIVITES
+        // ==========================
+
+        setActivites(data.activites || []);
+
+      } catch (error) {
+
+        console.error("Erreur :", error);
+
+        if (actif) {
+
+          setErreur(
+            "Impossible de charger les statistiques du Dashboard."
+          );
+
+        }
+
+      } finally {
+
+        if (actif) {
+          setChargement(false);
+        }
+
       }
 
-      const data = await response.json();
+    };
 
-      setStats({
-        actualites: data.actualites,
-        projets: data.projets,
-        partenaires: data.partenaires,
-        messages: data.messages
-      });
+    chargerDashboard();
 
-      setActivites(data.activites || []);
+    return () => {
+      actif = false;
+    };
 
-    } catch (error) {
-      console.error("Erreur :", error);
-    }
-  };
+  }, [navigate]);
+
 
   return (
+
     <div className="admin-page">
 
       <AdminSidebar />
@@ -59,6 +145,22 @@ function Admin() {
         </h1>
 
         {/* ==========================
+            MESSAGE D'ERREUR
+        ========================== */}
+
+        {erreur && (
+          <p
+            role="alert"
+            style={{
+              color: "#dc2626",
+              marginBottom: "20px"
+            }}
+          >
+            {erreur}
+          </p>
+        )}
+
+        {/* ==========================
             STATISTIQUES
         ========================== */}
 
@@ -66,29 +168,37 @@ function Admin() {
 
           <div className="stat-card">
             <h3>📰 Actualités</h3>
-            <h2>{stats.actualites}</h2>
+            <h2>
+              {chargement ? "..." : stats.actualites}
+            </h2>
           </div>
 
           <div className="stat-card">
             <h3>📁 Projets</h3>
-            <h2>{stats.projets}</h2>
+            <h2>
+              {chargement ? "..." : stats.projets}
+            </h2>
           </div>
 
           <div className="stat-card">
             <h3>🤝 Partenaires</h3>
-            <h2>{stats.partenaires}</h2>
+            <h2>
+              {chargement ? "..." : stats.partenaires}
+            </h2>
           </div>
 
           <div className="stat-card">
             <h3>📨 Messages</h3>
-            <h2>{stats.messages}</h2>
+            <h2>
+              {chargement ? "..." : stats.messages}
+            </h2>
           </div>
 
         </div>
 
 
         {/* ==========================
-            DERNIÈRES ACTIVITÉS
+            DERNIERES ACTIVITES
         ========================== */}
 
         <div className="activity">
@@ -107,7 +217,23 @@ function Admin() {
 
             <tbody>
 
-              {activites.length === 0 ? (
+              {chargement ? (
+
+                <tr>
+                  <td colSpan="3">
+                    Chargement des activités...
+                  </td>
+                </tr>
+
+              ) : erreur ? (
+
+                <tr>
+                  <td colSpan="3">
+                    Impossible de charger les activités.
+                  </td>
+                </tr>
+
+              ) : activites.length === 0 ? (
 
                 <tr>
                   <td colSpan="3">
@@ -148,6 +274,7 @@ function Admin() {
       </div>
 
     </div>
+
   );
 }
 

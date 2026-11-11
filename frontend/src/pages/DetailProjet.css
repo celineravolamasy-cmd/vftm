@@ -311,3 +311,284 @@
     font-size: 15px;
   }
 }
+
+
+/* ==============================
+   CAROUSEL DETAILS DU PROJET
+============================== */
+
+.detail-projet-image {
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-projet-image img {
+  display: block;
+  width: 100%;
+  height: 350px;
+  object-fit: cover;
+}
+
+.detail-photo-count {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  padding: 7px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .detail-projet-image img {
+    height: 240px;
+  }
+}
+
+
+/* =====================================
+   DETAILS PROJET : IMAGE A GAUCHE
+===================================== */
+
+.detail-projet-card {
+  display: grid;
+  grid-template-columns: 42% 1fr;
+  gap: 30px;
+  align-items: start;
+  padding: 30px;
+}
+
+/* IMAGE A GAUCHE */
+.detail-projet-image {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.detail-projet-image img {
+  display: block;
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+/* INFORMATIONS A DROITE */
+.detail-projet-content {
+  width: 100%;
+  min-width: 0;
+}
+
+/* INFORMATIONS GENERALES */
+.detail-projet-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.detail-projet-info > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* TABLETTE */
+@media (max-width: 1000px) {
+  .detail-projet-card {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-projet-image img {
+    height: 320px;
+  }
+}
+
+/* TELEPHONE */
+@media (max-width: 600px) {
+  .detail-projet-card {
+    padding: 18px;
+    gap: 20px;
+  }
+
+  .detail-projet-image img {
+    height: 240px;
+  }
+
+  .detail-projet-info {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* IMAGE A GAUCHE, INFORMATIONS A DROITE */
+
+.detail-projet-card {
+  display: grid;
+  grid-template-columns: 42% minmax(0, 1fr);
+  align-items: start;
+  gap: 30px;
+  padding: 30px;
+}
+
+.detail-projet-image {
+  position: sticky;
+  top: 160px;
+  width: 100%;
+  align-self: start;
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.detail-projet-image img {
+  width: 100%;
+  height: 360px;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-projet-content {
+  min-width: 0;
+  width: 100%;
+}
+
+.detail-projet-info {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.detail-inline-section {
+  margin-top: 24px;
+  padding: 18px 20px;
+  background: #f5f9f5;
+  border-left: 4px solid #16803c;
+  border-radius: 10px;
+}
+
+.detail-inline-section h3 {
+  color: #086b35;
+  margin: 0 0 12px;
+  font-size: 21px;
+}
+
+.detail-inline-section p {
+  margin: 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .detail-projet-card {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .detail-projet-image {
+    position: relative;
+    top: auto;
+  }
+
+  .detail-projet-image img {
+    height: 300px;
+  }
+}
+
+@media (max-width: 600px) {
+  .detail-projet-image img {
+    height: 240px;
+  }
+}
+
+/* ========================================
+   IMAGE MITOVY HAUTEUR AMIN'NY DETAILS
+======================================== */
+
+.detail-projet-card {
+  display: grid;
+  grid-template-columns: 42% minmax(0, 1fr);
+  gap: 30px;
+  align-items: stretch;
+  padding: 30px;
+}
+
+/* IMAGE A GAUCHE */
+.detail-projet-image {
+  position: relative;
+  top: auto;
+  width: 100%;
+  height: 100%;
+  min-height: 500px;
+  overflow: hidden;
+  border-radius: 14px;
+  align-self: stretch;
+}
+
+/* IMAGE MAMENO NY HAUTEUR */
+.detail-projet-image img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+/* DETAILS A DROITE */
+.detail-projet-content {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+}
+
+/* OBJECTIFS, BENEFICIAIRES, PARTENAIRES */
+.detail-inline-section {
+  margin-top: 20px;
+  padding: 18px 20px;
+  background: #f5f9f5;
+  border-left: 4px solid #16803c;
+  border-radius: 10px;
+}
+
+/* COMPTEUR DES IMAGES */
+.detail-photo-count {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  padding: 7px 14px;
+  border-radius: 20px;
+}
+
+/* TABLETTE ET TELEPHONE */
+@media (max-width: 900px) {
+  .detail-projet-card {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .detail-projet-image {
+    height: 320px;
+    min-height: 0;
+  }
+
+  .detail-projet-image img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .detail-projet-image {
+    height: 240px;
+  }
+}
+

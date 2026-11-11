@@ -1,96 +1,220 @@
+import API_URL from '../services/api';
+
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Handshake,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Image as ImageIcon,
+} from "lucide-react";
 
 import AdminSidebar from "../components/AdminSidebar";
 import AdminHeader from "../components/AdminHeader";
 
 import "./Admin.css";
 
+
+
 function AdminPartenaires() {
+  const navigate = useNavigate();
 
   const [partenaires, setPartenaires] = useState([]);
+  const [partenaireASupprimer, setPartenaireASupprimer] = useState(null);
+  const [message, setMessage] = useState("");
+  const [typeMessage, setTypeMessage] = useState("");
+  const [suppressionEnCours, setSuppressionEnCours] = useState(false);
 
-  useEffect(() => {
-    chargerPartenaires();
-  }, []);
+  // ==================================
+  // GESTION DE LA SESSION EXPIREE
+  // ==================================
 
-  // ==========================
-  // Charger les partenaires
-  // ==========================
+  const redirigerVersLogin = () => {
+    localStorage.removeItem("user");
 
-  const chargerPartenaires = async () => {
-
-    try {
-
-      const response = await fetch(
-        "https://vftm.onrender.com/partenaires"
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          "Erreur lors du chargement des partenaires"
-        );
-      }
-
-      const data = await response.json();
-
-      setPartenaires(data);
-
-    } catch (error) {
-
-      console.error("Erreur :", error);
-
-    }
-  };
-
-
-  // ==========================
-  // Supprimer un partenaire
-  // ==========================
-
-  const supprimerPartenaire = async (id) => {
-
-    const confirmation = window.confirm(
-      "Voulez-vous vraiment supprimer ce partenaire ?"
+    alert(
+      "Votre session a expiré. Veuillez vous reconnecter."
     );
 
-    if (!confirmation) {
+    navigate("/login", { replace: true });
+  };
+
+  // ==================================
+  // CHARGER LES PARTENAIRES
+  // ==================================
+
+  useEffect(() => {
+    let actif = true;
+
+    const chargerPartenaires = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/partenaires`
+        );
+
+        if (!response.ok) {
+          throw new Error("Erreur lors du chargement");
+        }
+
+        const data = await response.json();
+
+        if (actif) {
+          setPartenaires(data);
+        }
+
+      } catch (error) {
+        console.error("Erreur :", error);
+
+        if (actif) {
+          setMessage(
+            "Impossible de charger les partenaires."
+          );
+          setTypeMessage("erreur");
+        }
+      }
+    };
+
+    chargerPartenaires();
+
+    return () => {
+      actif = false;
+    };
+  }, []);
+
+  // ==================================
+  // SUPPRIMER UN PARTENAIRE AVEC CSRF
+  // ==================================
+
+  const supprimerPartenaire = async () => {
+    if (!partenaireASupprimer || suppressionEnCours) {
       return;
     }
 
+    setSuppressionEnCours(true);
+    setMessage("");
+
     try {
 
-      const response = await fetch(
-        `https://vftm.onrender.com/partenaires/${id}`,
+      // ==============================
+      // 1. VERIFIER LA SESSION
+      // ET RECUPERER LE TOKEN CSRF
+      // ==============================
+
+      const checkResponse = await fetch(
+        `${API_URL}/auth/check`,
         {
-          method: "DELETE"
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
         }
       );
 
-      if (!response.ok) {
+      if (checkResponse.status === 401) {
+        setPartenaireASupprimer(null);
+        redirigerVersLogin();
+        return;
+      }
+
+      if (!checkResponse.ok) {
         throw new Error(
+          "Impossible de vérifier la session."
+        );
+      }
+
+      const checkData = await checkResponse.json();
+
+      const csrfToken = checkData.csrf_token;
+
+      if (!csrfToken) {
+        throw new Error(
+          "Token CSRF introuvable."
+        );
+      }
+
+      // ==============================
+      // 2. SUPPRIMER AVEC SESSION + CSRF
+      // ==============================
+
+      const response = await fetch(
+        `${API_URL}/partenaires/${partenaireASupprimer.id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "X-CSRF-Token": csrfToken,
+          },
+        }
+      );
+
+      // ==============================
+      // 3. SESSION EXPIREE
+      // ==============================
+
+      if (response.status === 401) {
+        setPartenaireASupprimer(null);
+        redirigerVersLogin();
+        return;
+      }
+
+      // ==============================
+      // 4. GESTION DES ERREURS
+      // ==============================
+
+      if (!response.ok) {
+        const resultat = await response
+          .json()
+          .catch(() => ({}));
+
+        throw new Error(
+          resultat.message ||
           "Erreur lors de la suppression"
         );
       }
 
-      alert("Partenaire supprimé avec succès !");
+      // ==============================
+      // 5. ACTUALISER LE TABLEAU
+      // ==============================
 
-      chargerPartenaires();
-
-    } catch (error) {
-
-      console.error("Erreur :", error);
-
-      alert(
-        "Impossible de supprimer le partenaire."
+      setPartenaires((anciens) =>
+        anciens.filter(
+          (partenaire) =>
+            partenaire.id !== partenaireASupprimer.id
+        )
       );
 
+      // Fermer la fenêtre de confirmation
+      setPartenaireASupprimer(null);
+
+      // Notification de succès
+      setMessage(
+        "Partenaire supprimé avec succès !"
+      );
+      setTypeMessage("succes");
+
+    } catch (error) {
+      console.error(
+        "Erreur suppression partenaire :",
+        error
+      );
+
+      setMessage(
+        error.message ||
+        "Impossible de supprimer ce partenaire."
+      );
+
+      setTypeMessage("erreur");
+
+    } finally {
+      setSuppressionEnCours(false);
     }
   };
 
-
   return (
-
     <div className="admin-page">
 
       <AdminSidebar />
@@ -100,110 +224,72 @@ function AdminPartenaires() {
         <AdminHeader />
 
         <h1 className="admin-title">
+          <Handshake size={30} />
           Gestion des Partenaires
         </h1>
 
-
-        <Link to="/admin/partenaires/ajouter">
-
-          <button className="btn-add">
-            + Ajouter un partenaire
-          </button>
-
+        <Link
+          to="/admin/partenaires/ajouter"
+          className="btn-add actualite-add-link"
+        >
+          <Plus size={19} />
+          Ajouter un partenaire
         </Link>
 
-
-        <div className="activity">
-
-          <h2>Liste des partenaires</h2>
-
-
+        <div className="actualite-table-container">
           <table className="admin-table">
 
             <thead>
-
               <tr>
-
                 <th>ID</th>
-
                 <th>Nom</th>
-
                 <th>Description</th>
-
                 <th>Logo</th>
-
                 <th>Site web</th>
-
                 <th>Actions</th>
-
               </tr>
-
             </thead>
 
-
             <tbody>
-
               {partenaires.length === 0 ? (
-
                 <tr>
-
-                  <td colSpan="6">
-                    Aucun partenaire pour le moment.
+                  <td
+                    colSpan="6"
+                    className="actualite-empty"
+                  >
+                    Aucun partenaire disponible.
                   </td>
-
                 </tr>
-
               ) : (
-
                 partenaires.map((partenaire) => (
-
                   <tr key={partenaire.id}>
 
-                    <td>
-                      {partenaire.id}
-                    </td>
+                    <td>{partenaire.id}</td>
 
+                    <td>{partenaire.nom}</td>
 
-                    <td>
-                      {partenaire.nom}
-                    </td>
-
-
-                    <td>
+                    <td className="actualite-description">
                       {partenaire.description}
                     </td>
 
-
                     <td>
-
                       {partenaire.logo ? (
-
                         <img
-                          src={`https://vftm.onrender.com/uploads/${partenaire.logo}`}
+                          src={`${API_URL}/uploads/${partenaire.logo}`}
                           alt={partenaire.nom}
-                          style={{
-                            width: "80px",
-                            height: "60px",
-                            objectFit: "contain",
-                            borderRadius: "6px"
-                          }}
+                          className="actualite-image"
+                          style={{ objectFit: "contain" }}
                         />
-
                       ) : (
-
-                        <span>
+                        <span className="actualite-no-image">
+                          <ImageIcon size={16} />
                           Aucun logo
                         </span>
-
                       )}
-
                     </td>
 
-
                     <td>
-
                       {partenaire.site_web ? (
-
                         <a
                           href={partenaire.site_web}
                           target="_blank"
@@ -211,58 +297,161 @@ function AdminPartenaires() {
                         >
                           Visiter
                         </a>
-
                       ) : (
-
-                        <span>
-                          Non disponible
-                        </span>
-
+                        <span>Non disponible</span>
                       )}
-
                     </td>
 
-
                     <td>
+                      <div className="actualite-actions">
 
-                      <Link
-                        to={`/admin/partenaires/modifier/${partenaire.id}`}
-                      >
-
-                        <button className="btn-edit">
+                        <Link
+                          to={`/admin/partenaires/modifier/${partenaire.id}`}
+                          className="btn-edit actualite-action-btn"
+                        >
+                          <Pencil size={16} />
                           Modifier
+                        </Link>
+
+                        <button
+                          type="button"
+                          className="btn-delete actualite-action-btn"
+                          onClick={() => {
+                            setMessage("");
+                            setPartenaireASupprimer(partenaire);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                          Supprimer
                         </button>
 
-                      </Link>
-
-
-                      <button
-                        className="btn-delete"
-                        onClick={() =>
-                          supprimerPartenaire(partenaire.id)
-                        }
-                      >
-                        Supprimer
-                      </button>
-
+                      </div>
                     </td>
 
                   </tr>
-
                 ))
-
               )}
-
             </tbody>
 
           </table>
-
         </div>
 
       </div>
 
-    </div>
+      {/* ==================================
+          FENETRE DE CONFIRMATION
+      ================================== */}
 
+      {partenaireASupprimer && (
+        <div
+          className="actualite-modal-overlay"
+          onClick={() => {
+            if (!suppressionEnCours) {
+              setPartenaireASupprimer(null);
+            }
+          }}
+        >
+          <div
+            className="actualite-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="partenaire-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            <button
+              type="button"
+              className="actualite-modal-close"
+              aria-label="Fermer"
+              disabled={suppressionEnCours}
+              onClick={() =>
+                setPartenaireASupprimer(null)
+              }
+            >
+              <X size={20} />
+            </button>
+
+            <div className="actualite-modal-icon">
+              <AlertTriangle size={30} />
+            </div>
+
+            <h2 id="partenaire-modal-title">
+              Confirmer la suppression
+            </h2>
+
+            <p>
+              Voulez-vous vraiment supprimer le partenaire{" "}
+              <strong>
+                « {partenaireASupprimer.nom} »
+              </strong>{" "}
+              ? Cette action est définitive.
+            </p>
+
+            <div className="actualite-modal-actions">
+
+              <button
+                type="button"
+                className="actualite-cancel-btn"
+                disabled={suppressionEnCours}
+                onClick={() =>
+                  setPartenaireASupprimer(null)
+                }
+              >
+                Annuler
+              </button>
+
+              <button
+                type="button"
+                className="actualite-confirm-delete-btn"
+                disabled={suppressionEnCours}
+                onClick={supprimerPartenaire}
+              >
+                <Trash2 size={17} />
+
+                {suppressionEnCours
+                  ? "Suppression..."
+                  : "Oui, supprimer"}
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ==================================
+          NOTIFICATION
+      ================================== */}
+
+      {message && (
+        <div
+          className={`actualite-toast ${
+            typeMessage === "erreur"
+              ? "actualite-toast-error"
+              : "actualite-toast-success"
+          }`}
+          role="status"
+        >
+          {typeMessage === "erreur" ? (
+            <AlertTriangle size={20} />
+          ) : (
+            <CheckCircle size={20} />
+          )}
+
+          <span>{message}</span>
+
+          <button
+            type="button"
+            aria-label="Fermer la notification"
+            onClick={() => setMessage("")}
+          >
+            <X size={18} />
+          </button>
+
+        </div>
+      )}
+
+    </div>
   );
 }
 

@@ -1,4 +1,12 @@
+import API_URL from '../services/api';
+
 import { useState } from "react";
+import {
+  MapPin,
+  Phone,
+  Mail,
+} from "lucide-react";
+
 import "./Contact.css";
 
 function Contact() {
@@ -6,7 +14,6 @@ function Contact() {
   const [email, setEmail] = useState("");
   const [sujet, setSujet] = useState("");
   const [message, setMessage] = useState("");
-
   const [envoi, setEnvoi] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -16,7 +23,7 @@ function Contact() {
 
     try {
       const response = await fetch(
-        "https://vftm.onrender.com/messages",
+        `${API_URL}/messages`,
         {
           method: "POST",
           headers: {
@@ -41,10 +48,13 @@ function Contact() {
         setSujet("");
         setMessage("");
       } else {
-        alert(data.message || "Erreur lors de l'envoi du message.");
+        alert(
+          data.message ||
+          "Erreur lors de l'envoi du message."
+        );
       }
     } catch (error) {
-      console.error(error);
+      console.error("Erreur :", error);
       alert("Impossible de contacter le serveur.");
     } finally {
       setEnvoi(false);
@@ -53,51 +63,73 @@ function Contact() {
 
   return (
     <div className="page contact-page">
-
       <h1>Contactez-nous</h1>
 
       <p className="contact-intro">
-        Vous souhaitez en savoir plus sur le VFTM ou nous contacter ?
-        Retrouvez ci-dessous nos coordonnées.
+        Vous souhaitez en savoir plus sur le VFTM
+        ou nous contacter ? Retrouvez ci-dessous
+        nos coordonnées.
       </p>
 
       <div className="contact-container">
 
-        {/* Informations de contact */}
+        {/* Coordonnées officielles */}
         <div className="contact-info">
-
           <h2>Nos coordonnées</h2>
 
           <div className="contact-item">
-            <h3>📍 Adresse</h3>
-            <p>Fianarantsoa - Madagascar</p>
+            <h3>
+              <MapPin size={22} color="#16a34a" />
+              Adresse
+            </h3>
+
+            <p>
+              Près IE Anjoma,
+              Fianarantsoa, Madagascar
+            </p>
           </div>
 
           <div className="contact-item">
-            <h3>📞 Téléphone</h3>
-            <p>Coordonnée officielle du VFTM</p>
+            <h3>
+              <Phone size={22} color="#16a34a" />
+              Téléphone
+            </h3>
+
+            <p>
+              <a href="tel:+261348684171">
+                034 86 841 71
+              </a>
+            </p>
           </div>
 
           <div className="contact-item">
-            <h3>📧 Email</h3>
-            <p>Adresse email officielle du VFTM</p>
-          </div>
+            <h3>
+              <Mail size={22} color="#16a34a" />
+              Email
+            </h3>
 
+            <p>
+              <a href="mailto:asvftm@gmail.com">
+                asvftm@gmail.com
+              </a>
+            </p>
+          </div>
         </div>
 
-        {/* Formulaire */}
+        {/* Formulaire de contact */}
         <div className="contact-form-container">
-
           <h2>Envoyer un message</h2>
 
           <form
             className="contact-form"
             onSubmit={handleSubmit}
           >
-
-            <label>Nom complet</label>
+            <label htmlFor="nom">
+              Nom complet
+            </label>
 
             <input
+              id="nom"
               type="text"
               placeholder="Votre nom"
               value={nom}
@@ -105,9 +137,12 @@ function Contact() {
               required
             />
 
-            <label>Email</label>
+            <label htmlFor="email">
+              Email
+            </label>
 
             <input
+              id="email"
               type="email"
               placeholder="Votre adresse email"
               value={email}
@@ -115,9 +150,12 @@ function Contact() {
               required
             />
 
-            <label>Sujet</label>
+            <label htmlFor="sujet">
+              Sujet
+            </label>
 
             <input
+              id="sujet"
               type="text"
               placeholder="Sujet du message"
               value={sujet}
@@ -125,26 +163,31 @@ function Contact() {
               required
             />
 
-            <label>Message</label>
+            <label htmlFor="message">
+              Message
+            </label>
 
             <textarea
+              id="message"
               rows="6"
               placeholder="Écrivez votre message..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
-            ></textarea>
+            />
 
-            <button type="submit" disabled={envoi}>
-              {envoi ? "Envoi en cours..." : "Envoyer le message"}
+            <button
+              type="submit"
+              disabled={envoi}
+            >
+              {envoi
+                ? "Envoi en cours..."
+                : "Envoyer le message"}
             </button>
-
           </form>
-
         </div>
 
       </div>
-
     </div>
   );
 }

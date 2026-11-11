@@ -426,4 +426,17 @@
       padding: 30px;
     }
   }
+
+
+.home-hero-logo {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  background: white;
+  border-radius: 12px;
+  padding: 6px;
+  margin-bottom: 20px;
+}
+
   

@@ -181,3 +181,21 @@
   margin-top: 20px;
   text-align: center;
 }
+
+
+.contact-item h3 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contact-item a {
+  color: #166534;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.contact-item a:hover {
+  color: #16a34a;
+  text-decoration: underline;
+}

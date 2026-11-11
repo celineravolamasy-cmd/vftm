@@ -1,10 +1,13 @@
+import API_URL from '../services/api';
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import "./AjouterActualite.css";
 
-function AjouterPartenaire() {
 
+
+function AjouterPartenaire() {
   const navigate = useNavigate();
 
   const [nom, setNom] = useState("");
@@ -12,81 +15,161 @@ function AjouterPartenaire() {
   const [siteWeb, setSiteWeb] = useState("");
   const [logo, setLogo] = useState(null);
 
+  const [enregistrement, setEnregistrement] = useState(false);
 
-  // ==========================
-  // Ajouter le partenaire
-  // ==========================
+  // ==================================
+  // GESTION DE LA SESSION EXPIREE
+  // ==================================
+
+  const redirigerVersLogin = () => {
+    localStorage.removeItem("user");
+
+    alert(
+      "Votre session a expiré. Veuillez vous reconnecter."
+    );
+
+    navigate("/login", { replace: true });
+  };
+
+  // ==================================
+  // AJOUTER UN PARTENAIRE AVEC CSRF
+  // ==================================
 
   const handleSubmit = async (e) => {
-
     e.preventDefault();
 
-    const formData = new FormData();
+    if (enregistrement) return;
 
-    formData.append("nom", nom);
-    formData.append("description", description);
-    formData.append("site_web", siteWeb);
-
-    if (logo) {
-      formData.append("logo", logo);
-    }
-
+    setEnregistrement(true);
 
     try {
+      // ==============================
+      // 1. VERIFIER LA SESSION
+      // ET RECUPERER LE TOKEN CSRF
+      // ==============================
 
-      const response = await fetch(
-        "https://vftm.onrender.com/partenaires",
+      const checkResponse = await fetch(
+        `${API_URL}/auth/check`,
         {
-          method: "POST",
-          body: formData
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
         }
       );
 
-
-      const data = await response.json();
-
-
-      if (response.ok) {
-
-        alert("Partenaire ajouté avec succès !");
-
-        navigate("/admin/partenaires");
-
-      } else {
-
-        alert(
-          data.message || "Erreur lors de l'ajout."
-        );
-
+      if (checkResponse.status === 401) {
+        redirigerVersLogin();
+        return;
       }
 
-    } catch (error) {
+      if (!checkResponse.ok) {
+        throw new Error(
+          "Impossible de vérifier la session."
+        );
+      }
 
-      console.error("Erreur :", error);
+      const checkData = await checkResponse.json();
+
+      const csrfToken = checkData.csrf_token;
+
+      if (!csrfToken) {
+        throw new Error(
+          "Token CSRF introuvable."
+        );
+      }
+
+      // ==============================
+      // 2. PREPARER LES DONNEES
+      // ==============================
+
+      const formData = new FormData();
+
+      formData.append("nom", nom);
+      formData.append("description", description);
+      formData.append("site_web", siteWeb);
+
+      if (logo) {
+        formData.append("logo", logo);
+      }
+
+      // ==============================
+      // 3. ENVOYER AVEC SESSION + CSRF
+      // ==============================
+
+      const response = await fetch(
+        `${API_URL}/partenaires`,
+        {
+          method: "POST",
+
+          credentials: "include",
+
+          headers: {
+            "X-CSRF-Token": csrfToken,
+          },
+
+          body: formData,
+        }
+      );
+
+      // ==============================
+      // 4. SESSION EXPIREE
+      // ==============================
+
+      if (response.status === 401) {
+        redirigerVersLogin();
+        return;
+      }
+
+      // ==============================
+      // 5. VERIFIER LA REPONSE
+      // ==============================
+
+      const data = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+          "Erreur lors de l'ajout du partenaire."
+        );
+      }
+
+      // ==============================
+      // 6. CONFIRMATION
+      // ==============================
+
+      alert("Partenaire ajouté avec succès !");
+
+      navigate("/admin/partenaires");
+
+    } catch (error) {
+      console.error(
+        "Erreur ajout partenaire :",
+        error
+      );
 
       alert(
+        error.message ||
         "Impossible de contacter le serveur."
       );
 
+    } finally {
+      setEnregistrement(false);
     }
-
   };
 
-
   return (
-
     <div className="add-page">
 
       <h1>Ajouter un Partenaire</h1>
-
 
       <form
         className="add-form"
         onSubmit={handleSubmit}
       >
 
-        {/* Nom */}
-
+        {/* NOM */}
         <label>
           Nom du partenaire
         </label>
@@ -101,9 +184,7 @@ function AjouterPartenaire() {
           required
         />
 
-
-        {/* Description */}
-
+        {/* DESCRIPTION */}
         <label>
           Description
         </label>
@@ -117,9 +198,7 @@ function AjouterPartenaire() {
           }
         ></textarea>
 
-
-        {/* Logo */}
-
+        {/* LOGO */}
         <label>
           Logo
         </label>
@@ -128,13 +207,11 @@ function AjouterPartenaire() {
           type="file"
           accept="image/*"
           onChange={(e) =>
-            setLogo(e.target.files[0])
+            setLogo(e.target.files?.[0] || null)
           }
         />
 
-
-        {/* Site web */}
-
+        {/* SITE WEB */}
         <label>
           Site web
         </label>
@@ -148,22 +225,23 @@ function AjouterPartenaire() {
           }
         />
 
-
-        {/* Boutons */}
-
+        {/* BOUTONS */}
         <div className="buttons">
 
           <button
             type="submit"
             className="btn-save"
+            disabled={enregistrement}
           >
-            Enregistrer
+            {enregistrement
+              ? "Enregistrement..."
+              : "Enregistrer"}
           </button>
-
 
           <button
             type="button"
             className="btn-cancel"
+            disabled={enregistrement}
             onClick={() =>
               navigate("/admin/partenaires")
             }
@@ -176,7 +254,6 @@ function AjouterPartenaire() {
       </form>
 
     </div>
-
   );
 }
 

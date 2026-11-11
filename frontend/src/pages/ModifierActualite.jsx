@@ -1,7 +1,10 @@
+import API_URL from '../services/api';
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
 import "./AjouterActualite.css";
+
+
 
 function ModifierActualite() {
   const { id } = useParams();
@@ -10,77 +13,242 @@ function ModifierActualite() {
   const [titre, setTitre] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
-  const [ancienneImage, setAncienneImage] = useState("");
-  const [nouvelleImage, setNouvelleImage] = useState(null);
+
+  const [anciennesImages, setAnciennesImages] = useState([]);
+  const [imagesConservees, setImagesConservees] = useState([]);
+  const [nouvellesImages, setNouvellesImages] = useState([]);
+
+  const [chargement, setChargement] = useState(true);
+  const [enregistrement, setEnregistrement] = useState(false);
+
+  // ==================================
+  // Gestion de la session expirée
+  // ==================================
+
+  const redirigerVersLogin = () => {
+    localStorage.removeItem("user");
+
+    alert(
+      "Votre session a expiré. Veuillez vous reconnecter."
+    );
+
+    navigate("/login", { replace: true });
+  };
+
+  // ==================================
+  // Charger l'actualité
+  // ==================================
 
   useEffect(() => {
+    let actif = true;
+
+    const chargerActualite = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/actualites/${id}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Actualité introuvable");
+        }
+
+        const data = await response.json();
+
+        if (!actif) return;
+
+        setTitre(data.titre || "");
+        setDescription(data.description || "");
+        setDate(data.date || "");
+
+        const images = (
+          Array.isArray(data.images) && data.images.length
+            ? data.images
+            : data.image
+              ? [data.image]
+              : []
+        );
+
+        setAnciennesImages(images);
+        setImagesConservees(images);
+
+      } catch (error) {
+        console.error("Erreur chargement :", error);
+
+        if (actif) {
+          alert("Impossible de charger cette actualité.");
+        }
+
+      } finally {
+        if (actif) {
+          setChargement(false);
+        }
+      }
+    };
+
     chargerActualite();
+
+    return () => {
+      actif = false;
+    };
   }, [id]);
 
-  const chargerActualite = async () => {
-    try {
-      const response = await fetch(
-        `https://vftm.onrender.com/actualites/${id}`
-      );
+  // ==================================
+  // Sélection des anciennes images
+  // ==================================
 
-      if (!response.ok) {
-        throw new Error("Actualité introuvable");
-      }
-
-      const data = await response.json();
-
-      setTitre(data.titre);
-      setDescription(data.description);
-      setDate(data.date);
-      setAncienneImage(data.image || "");
-
-    } catch (error) {
-      console.error("Erreur :", error);
-    }
+  const changerSelection = (nomImage) => {
+    setImagesConservees((precedentes) =>
+      precedentes.includes(nomImage)
+        ? precedentes.filter((nom) => nom !== nomImage)
+        : [...precedentes, nomImage]
+    );
   };
+
+  // ==================================
+  // Modifier une actualité avec CSRF
+  // ==================================
 
   const modifierActualite = async (e) => {
     e.preventDefault();
 
+    if (enregistrement) return;
+
+    setEnregistrement(true);
+
     try {
+
+      // ==============================
+      // 1. VERIFIER LA SESSION
+      // ET RECUPERER LE TOKEN CSRF
+      // ==============================
+
+      const checkResponse = await fetch(
+        `${API_URL}/auth/check`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+      if (checkResponse.status === 401) {
+        redirigerVersLogin();
+        return;
+      }
+
+      if (!checkResponse.ok) {
+        throw new Error(
+          "Impossible de vérifier la session."
+        );
+      }
+
+      const checkData = await checkResponse.json();
+
+      const csrfToken = checkData.csrf_token;
+
+      if (!csrfToken) {
+        throw new Error(
+          "Token CSRF introuvable."
+        );
+      }
+
+      // ==============================
+      // 2. PREPARER LES DONNEES
+      // ==============================
+
       const formData = new FormData();
 
       formData.append("titre", titre);
       formData.append("description", description);
       formData.append("date", date);
 
-      // Raha misy image vaovao
-      if (nouvelleImage) {
-        formData.append("image", nouvelleImage);
-      }
+      // Activer la gestion des images
+      formData.append("gestion_images", "1");
 
-      // Raha tsy misy image vaovao,
-      // alefa ny anaran'ilay ancienne image
-      else {
-        formData.append("ancienne_image", ancienneImage);
-      }
+      // Images anciennes à conserver
+      imagesConservees.forEach((nom) => {
+        formData.append("images_a_conserver", nom);
+      });
+
+      // Nouvelles images à ajouter
+      nouvellesImages.forEach((fichier) => {
+        formData.append("images", fichier);
+      });
+
+      // ==============================
+      // 3. MODIFICATION AVEC CSRF
+      // ==============================
 
       const response = await fetch(
-        `https://vftm.onrender.com/actualites/${id}`,
+        `${API_URL}/actualites/${id}`,
         {
           method: "PUT",
+
+          credentials: "include",
+
+          headers: {
+            "X-CSRF-Token": csrfToken,
+          },
+
           body: formData,
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de la modification");
+      // ==============================
+      // 4. SESSION EXPIREE
+      // ==============================
+
+      if (response.status === 401) {
+        redirigerVersLogin();
+        return;
       }
+
+      // ==============================
+      // 5. GESTION DES ERREURS
+      // ==============================
+
+      if (!response.ok) {
+        const resultat = await response
+          .json()
+          .catch(() => ({}));
+
+        throw new Error(
+          resultat.message || "Erreur de modification"
+        );
+      }
+
+      // ==============================
+      // 6. CONFIRMATION
+      // ==============================
 
       alert("Actualité modifiée avec succès !");
 
       navigate("/admin/actualites");
 
     } catch (error) {
-      console.error("Erreur :", error);
-      alert("Erreur lors de la modification.");
+      console.error("Erreur modification :", error);
+
+      alert(
+        error.message ||
+        "Erreur lors de la modification."
+      );
+
+    } finally {
+      setEnregistrement(false);
     }
   };
+
+  // ==================================
+  // Affichage du chargement
+  // ==================================
+
+  if (chargement) {
+    return (
+      <div className="add-page">
+        <p>Chargement de l'actualité...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="add-page">
@@ -101,7 +269,6 @@ function ModifierActualite() {
           required
         />
 
-
         <label>Description</label>
 
         <textarea
@@ -109,8 +276,7 @@ function ModifierActualite() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
-        ></textarea>
-
+        />
 
         <label>Date</label>
 
@@ -121,50 +287,98 @@ function ModifierActualite() {
           required
         />
 
+        <label>Images actuelles</label>
 
-        <label>Image actuelle</label>
+        <p>
+          Décochez les images que vous ne souhaitez
+          plus afficher.
+        </p>
 
-        {ancienneImage && (
-          <div style={{ marginBottom: "15px" }}>
-
-            <img
-              src={`https://vftm.onrender.com/uploads/${ancienneImage}`}
-              alt="Image actuelle"
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "15px",
+            marginBottom: "20px",
+          }}
+        >
+          {anciennesImages.map((nom, index) => (
+            <div
+              key={nom}
               style={{
-                width: "200px",
-                height: "120px",
-                objectFit: "cover",
-                borderRadius: "8px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                width: "160px",
               }}
-            />
+            >
+              <img
+                src={`${API_URL}/uploads/${nom}`}
+                alt={`Image ${index + 1}`}
+                style={{
+                  width: "160px",
+                  height: "110px",
+                  objectFit: "cover",
+                  borderRadius: "8px",
+                }}
+              />
 
-          </div>
-        )}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  fontSize: "14px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={imagesConservees.includes(nom)}
+                  onChange={() => changerSelection(nom)}
+                />
 
+                Conserver
+              </label>
+            </div>
+          ))}
+        </div>
 
-        <label>Nouvelle image</label>
+        <label>Ajouter de nouvelles images</label>
 
         <input
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
           onChange={(e) =>
-            setNouvelleImage(e.target.files[0])
+            setNouvellesImages(
+              Array.from(e.target.files || [])
+            )
           }
         />
 
+        {nouvellesImages.length > 0 && (
+          <p>
+            {nouvellesImages.length} nouvelle(s)
+            image(s) sélectionnée(s).
+          </p>
+        )}
 
         <div className="buttons">
 
           <button
             type="submit"
             className="btn-save"
+            disabled={enregistrement}
           >
-            Modifier
+            {enregistrement
+              ? "Modification..."
+              : "Modifier"}
           </button>
 
           <button
             type="button"
             className="btn-cancel"
+            disabled={enregistrement}
             onClick={() =>
               navigate("/admin/actualites")
             }

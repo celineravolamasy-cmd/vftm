@@ -4,7 +4,7 @@ function Footer() {
         <h2>VFTM</h2>
   
         <p>
-          Vondron'ny Fampandrosoana ny Tantsaha Matsiatra Ambony
+          Vondrona Fampandrosoana ny Tantsaha Matsiatra Ambony
         </p>
   
         <p>

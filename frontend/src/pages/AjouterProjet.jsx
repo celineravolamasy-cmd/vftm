@@ -1,5 +1,9 @@
+import API_URL from '../services/api';
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+
 
 function AjouterProjet() {
   const navigate = useNavigate();
@@ -11,12 +15,85 @@ function AjouterProjet() {
   const [zoneIntervention, setZoneIntervention] = useState("");
   const [partenaires, setPartenaires] = useState("");
   const [date, setDate] = useState("");
-  const [image, setImage] = useState(null);
+
+  // Plusieurs images
+  const [images, setImages] = useState([]);
+  const [enregistrement, setEnregistrement] = useState(false);
+
+  // ==================================
+  // GESTION DE LA SESSION EXPIREE
+  // ==================================
+
+  const redirigerVersLogin = () => {
+    localStorage.removeItem("user");
+
+    alert(
+      "Votre session a expiré. Veuillez vous reconnecter."
+    );
+
+    navigate("/login", { replace: true });
+  };
+
+  // ==================================
+  // SELECTIONNER PLUSIEURS IMAGES
+  // ==================================
+
+  const handleImagesChange = (e) => {
+    const fichiers = Array.from(e.target.files || []);
+    setImages(fichiers);
+  };
+
+  // ==================================
+  // AJOUTER UN PROJET AVEC CSRF
+  // ==================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (enregistrement) return;
+
+    setEnregistrement(true);
+
     try {
+      // ==============================
+      // 1. VERIFIER LA SESSION
+      // ET RECUPERER LE TOKEN CSRF
+      // ==============================
+
+      const checkResponse = await fetch(
+        `${API_URL}/auth/check`,
+        {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        }
+      );
+
+      if (checkResponse.status === 401) {
+        redirigerVersLogin();
+        return;
+      }
+
+      if (!checkResponse.ok) {
+        throw new Error(
+          "Impossible de vérifier la session."
+        );
+      }
+
+      const checkData = await checkResponse.json();
+
+      const csrfToken = checkData.csrf_token;
+
+      if (!csrfToken) {
+        throw new Error(
+          "Token CSRF introuvable."
+        );
+      }
+
+      // ==============================
+      // 2. PREPARER LES DONNEES
+      // ==============================
+
       const formData = new FormData();
 
       formData.append("titre", titre);
@@ -27,29 +104,72 @@ function AjouterProjet() {
       formData.append("partenaires", partenaires);
       formData.append("date", date);
 
-      if (image) {
-        formData.append("image", image);
-      }
+      // Envoyer toutes les images sélectionnées
+      images.forEach((image) => {
+        formData.append("images", image);
+      });
+
+      // ==============================
+      // 3. ENVOYER AVEC SESSION + CSRF
+      // ==============================
 
       const response = await fetch(
-        "https://vftm.onrender.com/projets",
+        `${API_URL}/projets`,
         {
           method: "POST",
+
+          credentials: "include",
+
+          headers: {
+            "X-CSRF-Token": csrfToken,
+          },
+
           body: formData,
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Erreur lors de l'ajout");
+      // ==============================
+      // 4. SESSION EXPIREE
+      // ==============================
+
+      if (response.status === 401) {
+        redirigerVersLogin();
+        return;
       }
+
+      // ==============================
+      // 5. GESTION DES ERREURS
+      // ==============================
+
+      if (!response.ok) {
+        const resultat = await response
+          .json()
+          .catch(() => ({}));
+
+        throw new Error(
+          resultat.message ||
+          "Erreur lors de l'ajout du projet"
+        );
+      }
+
+      // ==============================
+      // 6. CONFIRMATION
+      // ==============================
 
       alert("Projet ajouté avec succès !");
 
       navigate("/admin/projets");
 
     } catch (error) {
-      console.error("Erreur :", error);
-      alert("Erreur lors de l'ajout du projet.");
+      console.error("Erreur ajout projet :", error);
+
+      alert(
+        error.message ||
+        "Erreur lors de l'ajout du projet."
+      );
+
+    } finally {
+      setEnregistrement(false);
     }
   };
 
@@ -74,7 +194,6 @@ function AjouterProjet() {
           required
         />
 
-
         {/* DESCRIPTION */}
         <label>Description</label>
 
@@ -84,8 +203,7 @@ function AjouterProjet() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           required
-        ></textarea>
-
+        />
 
         {/* OBJECTIFS */}
         <label>Objectifs du projet</label>
@@ -96,8 +214,7 @@ function AjouterProjet() {
           value={objectifs}
           onChange={(e) => setObjectifs(e.target.value)}
           required
-        ></textarea>
-
+        />
 
         {/* BENEFICIAIRES */}
         <label>Bénéficiaires</label>
@@ -108,8 +225,7 @@ function AjouterProjet() {
           value={beneficiaires}
           onChange={(e) => setBeneficiaires(e.target.value)}
           required
-        ></textarea>
-
+        />
 
         {/* ZONE */}
         <label>Zone d'intervention</label>
@@ -118,12 +234,9 @@ function AjouterProjet() {
           type="text"
           placeholder="Exemple : Haute Matsiatra"
           value={zoneIntervention}
-          onChange={(e) =>
-            setZoneIntervention(e.target.value)
-          }
+          onChange={(e) => setZoneIntervention(e.target.value)}
           required
         />
-
 
         {/* PARTENAIRES */}
         <label>Partenaires du projet</label>
@@ -132,11 +245,8 @@ function AjouterProjet() {
           type="text"
           placeholder="Entrer les partenaires du projet"
           value={partenaires}
-          onChange={(e) =>
-            setPartenaires(e.target.value)
-          }
+          onChange={(e) => setPartenaires(e.target.value)}
         />
-
 
         {/* DATE */}
         <label>Date</label>
@@ -148,18 +258,36 @@ function AjouterProjet() {
           required
         />
 
-
-        {/* IMAGE */}
-        <label>Image</label>
+        {/* IMAGES */}
+        <label>Images du projet</label>
 
         <input
           type="file"
-          accept="image/*"
-          onChange={(e) =>
-            setImage(e.target.files[0])
-          }
+          accept=".jpg,.jpeg,.jfif,.png,.webp,.gif,image/jpeg"
+          multiple
+          onChange={handleImagesChange}
         />
 
+        {images.length > 0 && (
+          <div
+            style={{
+              marginTop: "10px",
+              marginBottom: "15px",
+            }}
+          >
+            <p>
+              {images.length} image(s) sélectionnée(s)
+            </p>
+
+            <ul>
+              {images.map((image, index) => (
+                <li key={`${image.name}-${index}`}>
+                  {image.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* BOUTONS */}
         <div className="buttons">
@@ -167,16 +295,18 @@ function AjouterProjet() {
           <button
             type="submit"
             className="btn-save"
+            disabled={enregistrement}
           >
-            Enregistrer
+            {enregistrement
+              ? "Enregistrement..."
+              : "Enregistrer"}
           </button>
 
           <button
             type="button"
             className="btn-cancel"
-            onClick={() =>
-              navigate("/admin/projets")
-            }
+            disabled={enregistrement}
+            onClick={() => navigate("/admin/projets")}
           >
             Annuler
           </button>

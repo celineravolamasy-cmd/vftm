@@ -1,6 +1,94 @@
+import API_URL from '../services/api';
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import "./Projets.css";
+
+
+
+// ==============================
+// CAROUSEL DES IMAGES
+// ==============================
+
+function ProjetCard({ projet }) {
+  const [indexImage, setIndexImage] = useState(0);
+
+  // Récupérer toutes les images du projet
+  const images =
+    Array.isArray(projet.images) && projet.images.length > 0
+      ? projet.images
+      : projet.image
+        ? [projet.image]
+        : [];
+
+  // Changer automatiquement d'image
+  // toutes les 10 secondes
+  useEffect(() => {
+    if (images.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setIndexImage((index) =>
+        (index + 1) % images.length
+      );
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  return (
+    <article className="projet-card">
+
+      {images.length > 0 ? (
+        <div className="projet-image-container">
+          <img
+            src={`${API_URL}/uploads/${images[indexImage]}`}
+            alt={`${projet.titre} - Photo ${indexImage + 1}`}
+            className="projet-image"
+          />
+
+          {images.length > 1 && (
+            <span className="projet-photo-count">
+              {indexImage + 1} / {images.length}
+            </span>
+          )}
+        </div>
+      ) : (
+        <div className="projet-no-image">
+          🌱
+        </div>
+      )}
+
+      <div className="projet-content">
+
+        <span className="projet-date">
+          {projet.date
+            ? new Date(projet.date).toLocaleDateString("fr-FR")
+            : "Projet VFTM"}
+        </span>
+
+        <h3>{projet.titre}</h3>
+
+        <p>{projet.description}</p>
+
+        <div className="projet-footer">
+          <span>VFTM</span>
+
+          <Link
+            to={`/projets/${projet.id}`}
+            className="projet-details-link"
+          >
+            En savoir plus →
+          </Link>
+        </div>
+
+      </div>
+    </article>
+  );
+}
+
+// ==============================
+// PAGE PUBLIC PROJETS
+// ==============================
 
 function Projets() {
   const [projets, setProjets] = useState([]);
@@ -8,10 +96,12 @@ function Projets() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("https://vftm.onrender.com/projets")
+    fetch(`${API_URL}/projets`)
       .then((response) => {
         if (!response.ok) {
-          throw new Error("Erreur lors du chargement des projets");
+          throw new Error(
+            "Erreur lors du chargement des projets"
+          );
         }
         return response.json();
       })
@@ -32,7 +122,9 @@ function Projets() {
       {/* HEADER */}
       <section className="projets-header">
         <span>VFTM</span>
+
         <h1>Nos Projets</h1>
+
         <p>
           Découvrez les projets et initiatives mis en œuvre par le VFTM
           pour accompagner les producteurs et contribuer au développement
@@ -45,6 +137,7 @@ function Projets() {
 
         <div className="projets-intro">
           <h2>Nos initiatives</h2>
+
           <p>
             À travers ses différents projets, le VFTM accompagne les
             organisations paysannes, développe les filières agricoles et
@@ -75,49 +168,10 @@ function Projets() {
           <div className="projets-grid">
 
             {projets.map((projet) => (
-              <article className="projet-card" key={projet.id}>
-
-                {projet.image ? (
-                  <div className="projet-image-container">
-                    <img
-                      src={`https://vftm.onrender.com/uploads/${projet.image}`}
-                      alt={projet.titre}
-                      className="projet-image"
-                    />
-                  </div>
-                ) : (
-                  <div className="projet-no-image">
-                    🌱
-                  </div>
-                )}
-
-                <div className="projet-content">
-
-                  <span className="projet-date">
-                    {projet.date
-                      ? new Date(projet.date).toLocaleDateString("fr-FR")
-                      : "Projet VFTM"}
-                  </span>
-
-                  <h3>{projet.titre}</h3>
-
-                  <p>
-                    {projet.description}
-                  </p>
-
-                  <div className="projet-footer">
-  <span>VFTM</span>
-
-  <Link
-    to={`/projets/${projet.id}`}
-    className="projet-details-link"
-  >
-    En savoir plus →
-  </Link>
-</div>
-
-                </div>
-              </article>
+              <ProjetCard
+                key={projet.id}
+                projet={projet}
+              />
             ))}
 
           </div>

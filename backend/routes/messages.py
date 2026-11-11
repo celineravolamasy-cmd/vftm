@@ -1,17 +1,21 @@
+
 from flask import Blueprint, jsonify, request
 from config import get_connection
+from auth_utils import admin_required
+
 
 messages_bp = Blueprint("messages", __name__)
 
 
 # ==========================
 # Envoyer un message
+# ACCES PUBLIC
 # ==========================
 
 @messages_bp.route("/messages", methods=["POST"])
 def ajouter_message():
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     nom = data.get("nom")
     email = data.get("email")
@@ -26,121 +30,175 @@ def ajouter_message():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        INSERT INTO messages
-        (nom, email, sujet, message)
-        VALUES (%s, %s, %s, %s)
-    """, (
-        nom,
-        email,
-        sujet,
-        message
-    ))
+    try:
+        cur.execute("""
+            INSERT INTO messages
+                (nom, email, sujet, message)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            nom,
+            email,
+            sujet,
+            message
+        ))
 
-    conn.commit()
+        conn.commit()
 
-    cur.close()
-    conn.close()
+        return jsonify({
+            "message": "Message envoyé avec succès"
+        }), 201
 
-    return jsonify({
-        "message": "Message envoyé avec succès"
-    }), 201
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Récupérer tous les messages
+# ADMIN UNIQUEMENT
 # ==========================
 
 @messages_bp.route("/messages", methods=["GET"])
+@admin_required
 def get_messages():
 
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id, nom, email, sujet, message, date_message
-        FROM messages
-        ORDER BY id DESC
-    """)
+    try:
+        cur.execute("""
+            SELECT
+                id,
+                nom,
+                email,
+                sujet,
+                message,
+                date_message
+            FROM messages
+            ORDER BY id DESC
+        """)
 
-    rows = cur.fetchall()
+        rows = cur.fetchall()
 
-    messages = []
+        messages = []
 
-    for row in rows:
-        messages.append({
-            "id": row[0],
-            "nom": row[1],
-            "email": row[2],
-            "sujet": row[3],
-            "message": row[4],
-            "date": row[5].strftime("%d/%m/%Y à %H:%M:%S")
-                if row[5] else ""
-        })
+        for row in rows:
+            messages.append({
+                "id": row[0],
+                "nom": row[1],
+                "email": row[2],
+                "sujet": row[3],
+                "message": row[4],
+                "date": (
+                    row[5].strftime("%d/%m/%Y à %H:%M:%S")
+                    if row[5] else ""
+                )
+            })
 
-    cur.close()
-    conn.close()
+        return jsonify(messages)
 
-    return jsonify(messages)
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Récupérer un message par ID
+# ADMIN UNIQUEMENT
 # ==========================
 
-@messages_bp.route("/messages/<int:id>", methods=["GET"])
+@messages_bp.route(
+    "/messages/<int:id>",
+    methods=["GET"]
+)
+@admin_required
 def get_message(id):
 
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id, nom, email, sujet, message, date_message
-        FROM messages
-        WHERE id = %s
-    """, (id,))
+    try:
+        cur.execute("""
+            SELECT
+                id,
+                nom,
+                email,
+                sujet,
+                message,
+                date_message
+            FROM messages
+            WHERE id = %s
+        """, (id,))
 
-    row = cur.fetchone()
+        row = cur.fetchone()
 
-    cur.close()
-    conn.close()
+        if row is None:
+            return jsonify({
+                "message": "Message introuvable"
+            }), 404
 
-    if row is None:
         return jsonify({
-            "message": "Message introuvable"
-        }), 404
+            "id": row[0],
+            "nom": row[1],
+            "email": row[2],
+            "sujet": row[3],
+            "message": row[4],
+            "date": (
+                row[5].strftime("%d/%m/%Y à %H:%M:%S")
+                if row[5] else ""
+            )
+        })
 
-    return jsonify({
-        "id": row[0],
-        "nom": row[1],
-        "email": row[2],
-        "sujet": row[3],
-        "message": row[4],
-        "date": row[5].strftime("%d/%m/%Y à %H:%M:%S")
-            if row[5] else ""
-    })
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Supprimer un message
+# ADMIN UNIQUEMENT
 # ==========================
 
-@messages_bp.route("/messages/<int:id>", methods=["DELETE"])
+@messages_bp.route(
+    "/messages/<int:id>",
+    methods=["DELETE"]
+)
+@admin_required
 def supprimer_message(id):
 
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        DELETE FROM messages
-        WHERE id = %s
-    """, (id,))
+    try:
+        cur.execute("""
+            DELETE FROM messages
+            WHERE id = %s
+            RETURNING id
+        """, (id,))
 
-    conn.commit()
+        row = cur.fetchone()
 
-    cur.close()
-    conn.close()
+        if row is None:
+            conn.rollback()
 
-    return jsonify({
-        "message": "Message supprimé avec succès"
-    })
+            return jsonify({
+                "message": "Message introuvable"
+            }), 404
+
+        conn.commit()
+
+        return jsonify({
+            "message": "Message supprimé avec succès"
+        })
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cur.close()
+        conn.close()

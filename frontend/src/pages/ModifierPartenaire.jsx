@@ -1,10 +1,13 @@
+import API_URL from '../services/api';
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import "./AjouterActualite.css";
 
-function ModifierPartenaire() {
 
+
+function ModifierPartenaire() {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -14,130 +17,251 @@ function ModifierPartenaire() {
   const [logo, setLogo] = useState(null);
   const [ancienLogo, setAncienLogo] = useState("");
 
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState("");
+  const [enregistrement, setEnregistrement] = useState(false);
 
-  // ==========================
-  // Charger le partenaire
-  // ==========================
+  // ==================================
+  // GESTION DE LA SESSION EXPIREE
+  // ==================================
+
+  const redirigerVersLogin = () => {
+    localStorage.removeItem("user");
+
+    alert(
+      "Votre session a expiré. Veuillez vous reconnecter."
+    );
+
+    navigate("/login", { replace: true });
+  };
+
+  // ==================================
+  // CHARGER LE PARTENAIRE
+  // ==================================
 
   useEffect(() => {
+    let actif = true;
+
+    const chargerPartenaire = async () => {
+      setChargement(true);
+      setErreur("");
+
+      try {
+        const response = await fetch(
+          `${API_URL}/partenaires/${id}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Partenaire introuvable");
+        }
+
+        const data = await response.json();
+
+        if (!actif) return;
+
+        setNom(data.nom || "");
+        setDescription(data.description || "");
+        setSiteWeb(data.site_web || "");
+        setAncienLogo(data.logo || "");
+        setLogo(null);
+
+      } catch (error) {
+        console.error("Erreur chargement :", error);
+
+        if (actif) {
+          setErreur(
+            "Impossible de charger le partenaire."
+          );
+        }
+
+      } finally {
+        if (actif) {
+          setChargement(false);
+        }
+      }
+    };
 
     chargerPartenaire();
 
+    return () => {
+      actif = false;
+    };
   }, [id]);
 
-
-  const chargerPartenaire = async () => {
-
-    try {
-
-      const response = await fetch(
-        `https://vftm.onrender.com/partenaires/${id}`
-      );
-
-      if (!response.ok) {
-
-        throw new Error(
-          "Partenaire introuvable"
-        );
-
-      }
-
-      const data = await response.json();
-
-      setNom(data.nom || "");
-      setDescription(data.description || "");
-      setSiteWeb(data.site_web || "");
-      setAncienLogo(data.logo || "");
-
-    } catch (error) {
-
-      console.error("Erreur :", error);
-
-    }
-
-  };
-
-
-  // ==========================
-  // Modifier le partenaire
-  // ==========================
+  // ==================================
+  // MODIFIER LE PARTENAIRE AVEC CSRF
+  // ==================================
 
   const modifierPartenaire = async (e) => {
-
     e.preventDefault();
 
-    const formData = new FormData();
+    if (enregistrement) return;
 
-    formData.append("nom", nom);
-    formData.append("description", description);
-    formData.append("site_web", siteWeb);
-
-    if (logo) {
-
-      formData.append("logo", logo);
-
-    }
-
+    setEnregistrement(true);
 
     try {
+      // ==============================
+      // 1. VERIFIER LA SESSION
+      // ET RECUPERER LE TOKEN CSRF
+      // ==============================
 
-      const response = await fetch(
-        `https://vftm.onrender.com/partenaires/${id}`,
+      const checkResponse = await fetch(
+        `${API_URL}/auth/check`,
         {
-          method: "PUT",
-          body: formData
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
         }
       );
 
-      const data = await response.json();
+      if (checkResponse.status === 401) {
+        redirigerVersLogin();
+        return;
+      }
 
-
-      if (response.ok) {
-
-        alert(
-          "Partenaire modifié avec succès !"
+      if (!checkResponse.ok) {
+        throw new Error(
+          "Impossible de vérifier la session."
         );
+      }
 
-        navigate("/admin/partenaires");
+      const checkData = await checkResponse.json();
 
-      } else {
+      const csrfToken = checkData.csrf_token;
 
-        alert(
+      if (!csrfToken) {
+        throw new Error(
+          "Token CSRF introuvable."
+        );
+      }
+
+      // ==============================
+      // 2. PREPARER LES DONNEES
+      // ==============================
+
+      const formData = new FormData();
+
+      formData.append("nom", nom);
+      formData.append("description", description);
+      formData.append("site_web", siteWeb);
+
+      // Envoyer le nouveau logo si sélectionné
+      if (logo) {
+        formData.append("logo", logo);
+      }
+
+      // ==============================
+      // 3. MODIFICATION AVEC CSRF
+      // ==============================
+
+      const response = await fetch(
+        `${API_URL}/partenaires/${id}`,
+        {
+          method: "PUT",
+
+          credentials: "include",
+
+          headers: {
+            "X-CSRF-Token": csrfToken,
+          },
+
+          body: formData,
+        }
+      );
+
+      // ==============================
+      // 4. SESSION EXPIREE
+      // ==============================
+
+      if (response.status === 401) {
+        redirigerVersLogin();
+        return;
+      }
+
+      // ==============================
+      // 5. GESTION DES ERREURS
+      // ==============================
+
+      const data = await response
+        .json()
+        .catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
           data.message ||
           "Erreur lors de la modification."
         );
-
       }
 
-    } catch (error) {
+      // ==============================
+      // 6. CONFIRMATION
+      // ==============================
 
-      console.error("Erreur :", error);
+      alert("Partenaire modifié avec succès !");
+
+      navigate("/admin/partenaires");
+
+    } catch (error) {
+      console.error(
+        "Erreur modification partenaire :",
+        error
+      );
 
       alert(
+        error.message ||
         "Impossible de contacter le serveur."
       );
 
+    } finally {
+      setEnregistrement(false);
     }
-
   };
 
+  // ==================================
+  // CHARGEMENT
+  // ==================================
+
+  if (chargement) {
+    return (
+      <div className="add-page">
+        <p>Chargement du partenaire...</p>
+      </div>
+    );
+  }
+
+  // ==================================
+  // AFFICHAGE DES ERREURS
+  // ==================================
+
+  if (erreur) {
+    return (
+      <div className="add-page">
+        <p style={{ color: "red" }}>{erreur}</p>
+
+        <button
+          type="button"
+          className="btn-cancel"
+          onClick={() =>
+            navigate("/admin/partenaires")
+          }
+        >
+          Retour
+        </button>
+      </div>
+    );
+  }
 
   return (
-
     <div className="add-page">
 
-      <h1>
-        Modifier un Partenaire
-      </h1>
-
+      <h1>Modifier un Partenaire</h1>
 
       <form
         className="add-form"
         onSubmit={modifierPartenaire}
       >
 
-        {/* Nom */}
-
+        {/* NOM */}
         <label>
           Nom du partenaire
         </label>
@@ -151,9 +275,7 @@ function ModifierPartenaire() {
           required
         />
 
-
-        {/* Description */}
-
+        {/* DESCRIPTION */}
         <label>
           Description
         </label>
@@ -166,13 +288,9 @@ function ModifierPartenaire() {
           }
         ></textarea>
 
-
-        {/* Ancien logo */}
-
+        {/* LOGO ACTUEL */}
         {ancienLogo && (
-
           <div>
-
             <label>
               Logo actuel
             </label>
@@ -180,23 +298,19 @@ function ModifierPartenaire() {
             <br />
 
             <img
-              src={`https://vftm.onrender.com/uploads/${ancienLogo}`}
+              src={`${API_URL}/uploads/${ancienLogo}`}
               alt={nom}
               style={{
                 width: "120px",
                 height: "90px",
                 objectFit: "contain",
-                marginBottom: "15px"
+                marginBottom: "15px",
               }}
             />
-
           </div>
-
         )}
 
-
-        {/* Nouveau logo */}
-
+        {/* NOUVEAU LOGO */}
         <label>
           Nouveau logo
         </label>
@@ -205,13 +319,11 @@ function ModifierPartenaire() {
           type="file"
           accept="image/*"
           onChange={(e) =>
-            setLogo(e.target.files[0])
+            setLogo(e.target.files?.[0] || null)
           }
         />
 
-
-        {/* Site web */}
-
+        {/* SITE WEB */}
         <label>
           Site web
         </label>
@@ -225,22 +337,23 @@ function ModifierPartenaire() {
           }
         />
 
-
-        {/* Boutons */}
-
+        {/* BOUTONS */}
         <div className="buttons">
 
           <button
             type="submit"
             className="btn-save"
+            disabled={enregistrement}
           >
-            Modifier
+            {enregistrement
+              ? "Modification..."
+              : "Modifier"}
           </button>
-
 
           <button
             type="button"
             className="btn-cancel"
+            disabled={enregistrement}
             onClick={() =>
               navigate("/admin/partenaires")
             }
@@ -253,9 +366,7 @@ function ModifierPartenaire() {
       </form>
 
     </div>
-
   );
-
 }
 
 export default ModifierPartenaire;

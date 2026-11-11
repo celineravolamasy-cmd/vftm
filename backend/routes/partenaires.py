@@ -1,7 +1,10 @@
+
 from flask import Blueprint, jsonify, request
 from config import get_connection
+from auth_utils import admin_required
 from werkzeug.utils import secure_filename
 import os
+
 
 partenaires_bp = Blueprint("partenaires", __name__)
 
@@ -20,6 +23,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ==========================
 # Récupérer tous les partenaires
+# ACCES PUBLIC
 # ==========================
 
 @partenaires_bp.route("/partenaires", methods=["GET"])
@@ -28,19 +32,62 @@ def get_partenaires():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id, nom, description, logo, site_web
-        FROM partenaires
-        ORDER BY id DESC
-    """)
+    try:
+        cur.execute("""
+            SELECT id, nom, description, logo, site_web
+            FROM partenaires
+            ORDER BY id DESC
+        """)
 
-    rows = cur.fetchall()
+        rows = cur.fetchall()
 
-    partenaires = []
+        partenaires = []
 
-    for row in rows:
+        for row in rows:
+            partenaires.append({
+                "id": row[0],
+                "nom": row[1],
+                "description": row[2] or "",
+                "logo": row[3] or "",
+                "site_web": row[4] or ""
+            })
 
-        partenaires.append({
+        return jsonify(partenaires)
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ==========================
+# Récupérer un partenaire par ID
+# ACCES PUBLIC
+# ==========================
+
+@partenaires_bp.route(
+    "/partenaires/<int:id>",
+    methods=["GET"]
+)
+def get_partenaire(id):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            SELECT id, nom, description, logo, site_web
+            FROM partenaires
+            WHERE id = %s
+        """, (id,))
+
+        row = cur.fetchone()
+
+        if row is None:
+            return jsonify({
+                "message": "Partenaire introuvable"
+            }), 404
+
+        return jsonify({
             "id": row[0],
             "nom": row[1],
             "description": row[2] or "",
@@ -48,52 +95,21 @@ def get_partenaires():
             "site_web": row[4] or ""
         })
 
-    cur.close()
-    conn.close()
-
-    return jsonify(partenaires)
-
-
-# ==========================
-# Récupérer un partenaire par ID
-# ==========================
-
-@partenaires_bp.route("/partenaires/<int:id>", methods=["GET"])
-def get_partenaire(id):
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT id, nom, description, logo, site_web
-        FROM partenaires
-        WHERE id = %s
-    """, (id,))
-
-    row = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    if row is None:
-        return jsonify({
-            "message": "Partenaire introuvable"
-        }), 404
-
-    return jsonify({
-        "id": row[0],
-        "nom": row[1],
-        "description": row[2] or "",
-        "logo": row[3] or "",
-        "site_web": row[4] or ""
-    })
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Ajouter un partenaire
+# ADMIN UNIQUEMENT
 # ==========================
 
-@partenaires_bp.route("/partenaires", methods=["POST"])
+@partenaires_bp.route(
+    "/partenaires",
+    methods=["POST"]
+)
+@admin_required
 def ajouter_partenaire():
 
     nom = request.form.get("nom")
@@ -123,33 +139,44 @@ def ajouter_partenaire():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        INSERT INTO partenaires
-        (nom, description, logo, site_web)
-        VALUES (%s, %s, %s, %s)
-    """, (
-        nom,
-        description,
-        logo_name,
-        site_web if site_web else None
-    ))
+    try:
+        cur.execute("""
+            INSERT INTO partenaires
+                (nom, description, logo, site_web)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            nom,
+            description,
+            logo_name,
+            site_web if site_web else None
+        ))
 
-    conn.commit()
+        conn.commit()
 
-    cur.close()
-    conn.close()
+        return jsonify({
+            "message": "Partenaire ajouté avec succès",
+            "logo": logo_name
+        }), 201
 
-    return jsonify({
-        "message": "Partenaire ajouté avec succès",
-        "logo": logo_name
-    }), 201
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Modifier un partenaire
+# ADMIN UNIQUEMENT
 # ==========================
 
-@partenaires_bp.route("/partenaires/<int:id>", methods=["PUT"])
+@partenaires_bp.route(
+    "/partenaires/<int:id>",
+    methods=["PUT"]
+)
+@admin_required
 def modifier_partenaire(id):
 
     nom = request.form.get("nom")
@@ -166,104 +193,114 @@ def modifier_partenaire(id):
     conn = get_connection()
     cur = conn.cursor()
 
-    # Récupérer l'ancien logo
-    cur.execute("""
-        SELECT logo
-        FROM partenaires
-        WHERE id = %s
-    """, (id,))
+    try:
+        # Récupérer l'ancien logo
+        cur.execute("""
+            SELECT logo
+            FROM partenaires
+            WHERE id = %s
+        """, (id,))
 
-    row = cur.fetchone()
+        row = cur.fetchone()
 
-    if row is None:
-        cur.close()
-        conn.close()
+        if row is None:
+            return jsonify({
+                "message": "Partenaire introuvable"
+            }), 404
+
+        ancien_logo = row[0]
+        logo_name = ancien_logo
+
+        # Nouveau logo
+        if logo and logo.filename:
+
+            logo_name = secure_filename(logo.filename)
+
+            logo_path = os.path.join(
+                UPLOAD_FOLDER,
+                logo_name
+            )
+
+            logo.save(logo_path)
+
+        cur.execute("""
+            UPDATE partenaires
+            SET
+                nom = %s,
+                description = %s,
+                logo = %s,
+                site_web = %s
+            WHERE id = %s
+        """, (
+            nom,
+            description,
+            logo_name,
+            site_web if site_web else None,
+            id
+        ))
+
+        conn.commit()
 
         return jsonify({
-            "message": "Partenaire introuvable"
-        }), 404
+            "message": "Partenaire modifié avec succès"
+        })
 
-    ancien_logo = row[0]
+    except Exception:
+        conn.rollback()
+        raise
 
-    logo_name = ancien_logo
-
-    # Nouveau logo
-    if logo and logo.filename:
-
-        logo_name = secure_filename(logo.filename)
-
-        logo_path = os.path.join(
-            UPLOAD_FOLDER,
-            logo_name
-        )
-
-        logo.save(logo_path)
-
-    cur.execute("""
-        UPDATE partenaires
-        SET
-            nom = %s,
-            description = %s,
-            logo = %s,
-            site_web = %s
-        WHERE id = %s
-    """, (
-        nom,
-        description,
-        logo_name,
-        site_web if site_web else None,
-        id
-    ))
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-    return jsonify({
-        "message": "Partenaire modifié avec succès"
-    })
+    finally:
+        cur.close()
+        conn.close()
 
 
 # ==========================
 # Supprimer un partenaire
+# ADMIN UNIQUEMENT
 # ==========================
 
-@partenaires_bp.route("/partenaires/<int:id>", methods=["DELETE"])
+@partenaires_bp.route(
+    "/partenaires/<int:id>",
+    methods=["DELETE"]
+)
+@admin_required
 def supprimer_partenaire(id):
 
     conn = get_connection()
     cur = conn.cursor()
 
-    # Récupérer le logo avant suppression
-    cur.execute("""
-        SELECT logo
-        FROM partenaires
-        WHERE id = %s
-    """, (id,))
+    try:
+        # Récupérer le logo avant suppression
+        cur.execute("""
+            SELECT logo
+            FROM partenaires
+            WHERE id = %s
+        """, (id,))
 
-    row = cur.fetchone()
+        row = cur.fetchone()
 
-    if row is None:
+        if row is None:
+            return jsonify({
+                "message": "Partenaire introuvable"
+            }), 404
+
+        logo_name = row[0]
+
+        # Supprimer de la base
+        cur.execute("""
+            DELETE FROM partenaires
+            WHERE id = %s
+        """, (id,))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
         cur.close()
         conn.close()
-
-        return jsonify({
-            "message": "Partenaire introuvable"
-        }), 404
-
-    logo_name = row[0]
-
-    # Supprimer de la base
-    cur.execute("""
-        DELETE FROM partenaires
-        WHERE id = %s
-    """, (id,))
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
 
     # Supprimer le fichier logo
     if logo_name:

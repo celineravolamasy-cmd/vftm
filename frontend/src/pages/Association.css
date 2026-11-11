@@ -260,3 +260,250 @@
     padding: 25px;
   }
 }
+
+
+/* Statistiques VFTM */
+.vftm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 25px 0;
+}
+
+.vftm-stat {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 22px 14px;
+  text-align: center;
+}
+
+.vftm-stat strong {
+  display: block;
+  font-size: 30px;
+  color: #166534;
+  margin-bottom: 8px;
+}
+
+.vftm-stat span {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* Activités économiques */
+.vftm-activities {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 25px;
+}
+
+.vftm-activity {
+  padding: 22px;
+  background: #f8faf9;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.vftm-activity h3 {
+  color: #166534;
+  font-size: 19px;
+  margin-bottom: 12px;
+}
+
+.vftm-activity p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* Vision */
+.vftm-vision-flow {
+  padding: 20px;
+  margin: 25px 0;
+  background: #f0fdf4;
+  border-left: 4px solid #16a34a;
+  border-radius: 8px;
+  color: #166534;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* Coordonnées */
+.association-contact p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.association-contact a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.association-contact a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vftm-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .vftm-activities {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==============================
+   STATISTIQUES VFTM
+============================== */
+
+.vftm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 25px 0;
+}
+
+.vftm-stat {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 22px 14px;
+  text-align: center;
+}
+
+.vftm-stat strong {
+  display: block;
+  font-size: 30px;
+  color: #166534;
+  margin-bottom: 8px;
+}
+
+.vftm-stat span {
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ==============================
+   TABLEAUX MODERNES
+============================== */
+
+.vftm-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  margin: 25px 0;
+  border-radius: 14px;
+  border: 1px solid #e2e8e4;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.06);
+}
+
+.vftm-modern-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  font-size: 15px;
+  text-align: left;
+}
+
+.vftm-modern-table thead {
+  background: #166534;
+  color: #ffffff;
+}
+
+.vftm-modern-table th {
+  padding: 17px 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+.vftm-modern-table td {
+  padding: 17px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: top;
+  line-height: 1.6;
+}
+
+.vftm-modern-table tbody tr:nth-child(even) {
+  background: #f0fdf4;
+}
+
+.vftm-modern-table tbody tr:hover {
+  background: #dcfce7;
+  transition: background 0.2s ease;
+}
+
+.vftm-modern-table td:first-child {
+  color: #15803d;
+  font-weight: 700;
+  width: 55px;
+}
+
+.vftm-modern-table td strong {
+  color: #166534;
+}
+
+.vftm-modern-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ==============================
+   VISION VFTM
+============================== */
+
+.vftm-vision-flow {
+  padding: 20px;
+  margin: 25px 0;
+  background: #f0fdf4;
+  border-left: 4px solid #16a34a;
+  border-radius: 8px;
+  color: #166534;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.8;
+}
+
+/* ==============================
+   CONTACT
+============================== */
+
+.association-contact p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.association-contact a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.association-contact a:hover {
+  text-decoration: underline;
+}
+
+/* ==============================
+   RESPONSIVE
+============================== */
+
+@media (max-width: 768px) {
+  .vftm-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .vftm-modern-table {
+    font-size: 13px;
+  }
+
+  .vftm-modern-table th,
+  .vftm-modern-table td {
+    padding: 12px;
+  }
+}
+
