@@ -41,33 +41,23 @@ load_dotenv(
 app = Flask(__name__)
 
 
+
 # ==================================
 # CONFIGURATION SESSION
 # ==================================
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY"
-)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
 
 if not app.config["SECRET_KEY"]:
     raise RuntimeError(
         "SECRET_KEY manquante dans les variables d'environnement."
     )
 
+# Configuration des cookies pour Render (HTTPS)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
 
-# Configuration locale / production
-COOKIE_SECURE = (
-    os.environ.get(
-        "COOKIE_SECURE", "false"
-    ).lower() == "true"
-)
-
-app.config["SESSION_COOKIE_SECURE"] = COOKIE_SECURE
-
-app.config["SESSION_COOKIE_SAMESITE"] = (
-    "None" if COOKIE_SECURE else "Lax"
-)
 
 
 # ==================================
