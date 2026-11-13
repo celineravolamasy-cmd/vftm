@@ -12,26 +12,40 @@ UPLOAD_FOLDER = os.path.join(
     "uploads"
 )
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 ALLOWED_EXTENSIONS = {
-    "jpg", "jpeg", "png", "webp", "gif"
+    "jpg", "jpeg", "png", "webp", "gif",
+    "jfif", "bmp"
 }
+
 # Enregistrer une image
 def enregistrer_image(fichier):
     if not fichier or not fichier.filename:
         return None
+
     nom_original = secure_filename(fichier.filename)
+
     if "." not in nom_original:
         raise ValueError("Format d'image non valide")
+
     extension = nom_original.rsplit(".", 1)[1].lower()
+
     if extension not in ALLOWED_EXTENSIONS:
-        raise ValueError("Format d'image non autorisé")
+        raise ValueError(
+            f"Format d'image non autorisé : .{extension}"
+        )
+
     nom_unique = f"{uuid4().hex}.{extension}"
+
     chemin = os.path.join(
         UPLOAD_FOLDER,
         nom_unique
     )
+
     fichier.save(chemin)
+
     return nom_unique
+
 
 
 # ==========================
