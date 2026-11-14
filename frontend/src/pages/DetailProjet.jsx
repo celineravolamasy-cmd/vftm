@@ -1,10 +1,22 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import "./DetailProjet.css";
 
+// Fonction pour récupérer l'adresse de l'image
+function getImageUrl(image) {
+  if (!image) return "";
 
+  // Si l'image possède déjà une URL complète (Cloudinary)
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  // Pour les anciennes images stockées dans uploads
+  return `${API_URL}/uploads/${image}`;
+}
 
 function DetailProjet() {
   const { id } = useParams();
@@ -113,6 +125,11 @@ function DetailProjet() {
   }
 
   // ==================================
+  // DATE DU PROJET
+  // ==================================
+  const dateProjet = projet.date || projet.date_projet;
+
+  // ==================================
   // PAGE DETAILS DU PROJET
   // ==================================
   return (
@@ -149,8 +166,12 @@ function DetailProjet() {
             <div className="detail-projet-image">
 
               <img
-                src={`${API_URL}/uploads/${images[indexImage]}`}
+                src={getImageUrl(images[indexImage])}
                 alt={`${projet.titre} - Photo ${indexImage + 1}`}
+                onError={(e) => {
+                  console.error("Erreur de chargement de l'image");
+                  e.currentTarget.style.display = "none";
+                }}
               />
 
               {images.length > 1 && (
@@ -169,9 +190,9 @@ function DetailProjet() {
 
             {/* DATE */}
             <span className="detail-projet-date">
-              {projet.date
+              {dateProjet
                 ? new Date(
-                    `${projet.date}T00:00:00`
+                    `${String(dateProjet).slice(0, 10)}T00:00:00`
                   ).toLocaleDateString("fr-FR")
                 : "Projet VFTM"}
             </span>

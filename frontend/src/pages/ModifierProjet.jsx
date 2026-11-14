@@ -1,11 +1,27 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import "./AjouterActualite.css";
 
+// ==================================
+// GERER LES URL DES IMAGES
+// ==================================
 
+function getImageUrl(image) {
+  if (!image) return "";
+
+  if (
+    image.startsWith("http://") ||
+    image.startsWith("https://")
+  ) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
 
 function ModifierProjet() {
   const { id } = useParams();
@@ -73,7 +89,7 @@ function ModifierProjet() {
         setBeneficiaires(data.beneficiaires || "");
         setZoneIntervention(data.zone_intervention || "");
         setPartenaires(data.partenaires || "");
-        setDate(data.date || "");
+        setDate(data.date || data.date_projet || "");
 
         const images =
           Array.isArray(data.images) && data.images.length > 0
@@ -124,6 +140,28 @@ function ModifierProjet() {
 
   const handleImagesChange = (e) => {
     const fichiers = Array.from(e.target.files || []);
+
+    const formatsAutorises = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ];
+
+    const fichiersInvalides = fichiers.filter(
+      (fichier) => !formatsAutorises.includes(fichier.type)
+    );
+
+    if (fichiersInvalides.length > 0) {
+      alert(
+        "Format non autorisé. Utilisez JPG, JPEG, PNG, WEBP ou GIF."
+      );
+
+      e.target.value = "";
+      setNouvellesImages([]);
+      return;
+    }
+
     setNouvellesImages(fichiers);
   };
 
@@ -139,11 +177,7 @@ function ModifierProjet() {
     setEnregistrement(true);
 
     try {
-
-      // ==============================
-      // 1. VERIFIER LA SESSION
-      // ET RECUPERER LE TOKEN CSRF
-      // ==============================
+      // 1. Vérifier la session et récupérer le token CSRF
 
       const checkResponse = await fetch(
         `${API_URL}/auth/check`,
@@ -166,73 +200,62 @@ function ModifierProjet() {
       }
 
       const checkData = await checkResponse.json();
-
       const csrfToken = checkData.csrf_token;
 
       if (!csrfToken) {
-        throw new Error(
-          "Token CSRF introuvable."
-        );
+        throw new Error("Token CSRF introuvable.");
       }
 
-      // ==============================
-      // 2. PREPARER LES DONNEES
-      // ==============================
+      // 2. Préparer les données
 
       const formData = new FormData();
 
-      formData.append("titre", titre);
-      formData.append("description", description);
-      formData.append("objectifs", objectifs);
-      formData.append("beneficiaires", beneficiaires);
-      formData.append("zone_intervention", zoneIntervention);
-      formData.append("partenaires", partenaires);
+      formData.append("titre", titre.trim());
+      formData.append("description", description.trim());
+      formData.append("objectifs", objectifs.trim());
+      formData.append("beneficiaires", beneficiaires.trim());
+      formData.append("zone_intervention", zoneIntervention.trim());
+      formData.append("partenaires", partenaires.trim());
       formData.append("date", date);
 
       // Activer la gestion des images
+
       formData.append("gestion_images", "1");
 
       // Images anciennes à conserver
+
       imagesConservees.forEach((nom) => {
         formData.append("images_a_conserver", nom);
       });
 
       // Nouvelles images à ajouter
+
       nouvellesImages.forEach((fichier) => {
         formData.append("images", fichier);
       });
 
-      // ==============================
-      // 3. MODIFICATION AVEC CSRF
-      // ==============================
+      // 3. Envoyer la modification au backend
 
       const response = await fetch(
         `${API_URL}/projets/${id}`,
         {
           method: "PUT",
-
           credentials: "include",
-
           headers: {
             "X-CSRF-Token": csrfToken,
           },
-
           body: formData,
         }
       );
 
-      // ==============================
-      // 4. SESSION EXPIREE
-      // ==============================
+      // 4. Vérifier la session
 
       if (response.status === 401) {
         redirigerVersLogin();
         return;
       }
 
-      // ==============================
-      // 5. GESTION DES ERREURS
-      // ==============================
+      // 5. Gérer les erreurs
 
       if (!response.ok) {
         const resultat = await response
@@ -245,9 +268,7 @@ function ModifierProjet() {
         );
       }
 
-      // ==============================
-      // 6. CONFIRMATION
-      // ==============================
+      // 6. Confirmation
 
       alert("Projet modifié avec succès !");
 
@@ -301,6 +322,10 @@ function ModifierProjet() {
     );
   }
 
+  // ==================================
+  // AFFICHAGE DU FORMULAIRE
+  // ==================================
+
   return (
     <div className="add-page">
 
@@ -311,9 +336,7 @@ function ModifierProjet() {
         onSubmit={modifierProjet}
       >
 
-        {/* TITRE */}
         <label>Titre</label>
-
         <input
           type="text"
           value={titre}
@@ -321,9 +344,7 @@ function ModifierProjet() {
           required
         />
 
-        {/* DESCRIPTION */}
         <label>Description</label>
-
         <textarea
           rows="6"
           value={description}
@@ -331,9 +352,7 @@ function ModifierProjet() {
           required
         />
 
-        {/* OBJECTIFS */}
         <label>Objectifs du projet</label>
-
         <textarea
           rows="5"
           value={objectifs}
@@ -341,9 +360,7 @@ function ModifierProjet() {
           required
         />
 
-        {/* BENEFICIAIRES */}
         <label>Bénéficiaires</label>
-
         <textarea
           rows="5"
           value={beneficiaires}
@@ -351,9 +368,7 @@ function ModifierProjet() {
           required
         />
 
-        {/* ZONE */}
         <label>Zone d'intervention</label>
-
         <input
           type="text"
           value={zoneIntervention}
@@ -361,18 +376,14 @@ function ModifierProjet() {
           required
         />
 
-        {/* PARTENAIRES */}
         <label>Partenaires du projet</label>
-
         <input
           type="text"
           value={partenaires}
           onChange={(e) => setPartenaires(e.target.value)}
         />
 
-        {/* DATE */}
         <label>Date</label>
-
         <input
           type="date"
           value={date}
@@ -381,6 +392,7 @@ function ModifierProjet() {
         />
 
         {/* IMAGES ACTUELLES */}
+
         <label>Images actuelles</label>
 
         <p>
@@ -400,6 +412,7 @@ function ModifierProjet() {
             marginBottom: "20px",
           }}
         >
+
           {anciennesImages.map((nom, index) => (
             <div
               key={`${nom}-${index}`}
@@ -412,13 +425,16 @@ function ModifierProjet() {
             >
 
               <img
-                src={`${API_URL}/uploads/${nom}`}
+                src={getImageUrl(nom)}
                 alt={`Image ${index + 1}`}
                 style={{
                   width: "160px",
                   height: "110px",
                   objectFit: "cover",
                   borderRadius: "8px",
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
                 }}
               />
 
@@ -435,19 +451,22 @@ function ModifierProjet() {
                   checked={imagesConservees.includes(nom)}
                   onChange={() => changerSelection(nom)}
                 />
+
                 Conserver
               </label>
 
             </div>
           ))}
+
         </div>
 
         {/* NOUVELLES IMAGES */}
+
         <label>Ajouter de nouvelles images</label>
 
         <input
           type="file"
-          accept=".jpg,.jpeg,.jfif,.png,.webp,.gif,image/jpeg"
+          accept=".jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif"
           multiple
           onChange={handleImagesChange}
         />
@@ -475,6 +494,7 @@ function ModifierProjet() {
         )}
 
         {/* BOUTONS */}
+
         <div className="buttons">
 
           <button

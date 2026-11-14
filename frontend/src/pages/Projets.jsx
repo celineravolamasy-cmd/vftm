@@ -1,19 +1,36 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import "./Projets.css";
 
+// ==================================
+// FONCTION URL IMAGE
+// ==================================
 
+function getImageUrl(image) {
+  if (!image) return "";
 
-// ==============================
+  if (
+    image.startsWith("http://") ||
+    image.startsWith("https://")
+  ) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
+
+// ==================================
 // CAROUSEL DES IMAGES
-// ==============================
+// ==================================
 
 function ProjetCard({ projet }) {
   const [indexImage, setIndexImage] = useState(0);
+  const [imageErreur, setImageErreur] = useState(false);
 
-  // Récupérer toutes les images du projet
   const images =
     Array.isArray(projet.images) && projet.images.length > 0
       ? projet.images
@@ -21,29 +38,36 @@ function ProjetCard({ projet }) {
         ? [projet.image]
         : [];
 
-  // Changer automatiquement d'image
-  // toutes les 10 secondes
   useEffect(() => {
+    setIndexImage(0);
+    setImageErreur(false);
+
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
       setIndexImage((index) =>
         (index + 1) % images.length
       );
+
+      setImageErreur(false);
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [projet.id, images.length]);
+
+  const dateProjet = projet.date || projet.date_projet;
 
   return (
     <article className="projet-card">
 
-      {images.length > 0 ? (
+      {images.length > 0 && !imageErreur ? (
         <div className="projet-image-container">
+
           <img
-            src={`${API_URL}/uploads/${images[indexImage]}`}
+            src={getImageUrl(images[indexImage])}
             alt={`${projet.titre} - Photo ${indexImage + 1}`}
             className="projet-image"
+            onError={() => setImageErreur(true)}
           />
 
           {images.length > 1 && (
@@ -51,6 +75,7 @@ function ProjetCard({ projet }) {
               {indexImage + 1} / {images.length}
             </span>
           )}
+
         </div>
       ) : (
         <div className="projet-no-image">
@@ -61,8 +86,8 @@ function ProjetCard({ projet }) {
       <div className="projet-content">
 
         <span className="projet-date">
-          {projet.date
-            ? new Date(projet.date).toLocaleDateString("fr-FR")
+          {dateProjet
+            ? new Date(dateProjet).toLocaleDateString("fr-FR")
             : "Projet VFTM"}
         </span>
 
@@ -71,6 +96,7 @@ function ProjetCard({ projet }) {
         <p>{projet.description}</p>
 
         <div className="projet-footer">
+
           <span>VFTM</span>
 
           <Link
@@ -79,16 +105,18 @@ function ProjetCard({ projet }) {
           >
             En savoir plus →
           </Link>
+
         </div>
 
       </div>
+
     </article>
   );
 }
 
-// ==============================
+// ==================================
 // PAGE PUBLIC PROJETS
-// ==============================
+// ==================================
 
 function Projets() {
   const [projets, setProjets] = useState([]);
@@ -96,31 +124,50 @@ function Projets() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_URL}/projets`)
-      .then((response) => {
+    let actif = true;
+
+    const chargerProjets = async () => {
+      try {
+        const response = await fetch(`${API_URL}/projets`);
+
         if (!response.ok) {
           throw new Error(
             "Erreur lors du chargement des projets"
           );
         }
-        return response.json();
-      })
-      .then((data) => {
-        setProjets(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError("Impossible de charger les projets.");
-        setLoading(false);
-      });
+
+        const data = await response.json();
+
+        if (actif) {
+          setProjets(Array.isArray(data) ? data : []);
+        }
+
+      } catch (err) {
+        console.error("Erreur chargement projets :", err);
+
+        if (actif) {
+          setError("Impossible de charger les projets.");
+        }
+
+      } finally {
+        if (actif) {
+          setLoading(false);
+        }
+      }
+    };
+
+    chargerProjets();
+
+    return () => {
+      actif = false;
+    };
   }, []);
 
   return (
     <div className="projets-page">
 
-      {/* HEADER */}
       <section className="projets-header">
+
         <span>VFTM</span>
 
         <h1>Nos Projets</h1>
@@ -130,12 +177,13 @@ function Projets() {
           pour accompagner les producteurs et contribuer au développement
           agricole de la Haute Matsiatra.
         </p>
+
       </section>
 
-      {/* CONTENU */}
       <section className="projets-container">
 
         <div className="projets-intro">
+
           <h2>Nos initiatives</h2>
 
           <p>
@@ -144,6 +192,7 @@ function Projets() {
             favorise l'amélioration durable des revenus des exploitations
             agricoles familiales.
           </p>
+
         </div>
 
         {loading && (

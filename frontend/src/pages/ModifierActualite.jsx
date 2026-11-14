@@ -1,10 +1,21 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import "./AjouterActualite.css";
 
+// Mampiseho sary Cloudinary na sary taloha ao amin'ny uploads
+function getImageUrl(image) {
+  if (!image) return "";
 
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
 
 function ModifierActualite() {
   const { id } = useParams();
@@ -21,32 +32,22 @@ function ModifierActualite() {
   const [chargement, setChargement] = useState(true);
   const [enregistrement, setEnregistrement] = useState(false);
 
-  // ==================================
-  // Gestion de la session expirée
-  // ==================================
-
+  // Session expirée
   const redirigerVersLogin = () => {
     localStorage.removeItem("user");
 
-    alert(
-      "Votre session a expiré. Veuillez vous reconnecter."
-    );
+    alert("Votre session a expiré. Veuillez vous reconnecter.");
 
     navigate("/login", { replace: true });
   };
 
-  // ==================================
   // Charger l'actualité
-  // ==================================
-
   useEffect(() => {
     let actif = true;
 
     const chargerActualite = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/actualites/${id}`
-        );
+        const response = await fetch(`${API_URL}/actualites/${id}`);
 
         if (!response.ok) {
           throw new Error("Actualité introuvable");
@@ -61,7 +62,7 @@ function ModifierActualite() {
         setDate(data.date || "");
 
         const images = (
-          Array.isArray(data.images) && data.images.length
+          Array.isArray(data.images) && data.images.length > 0
             ? data.images
             : data.image
               ? [data.image]
@@ -70,14 +71,12 @@ function ModifierActualite() {
 
         setAnciennesImages(images);
         setImagesConservees(images);
-
       } catch (error) {
         console.error("Erreur chargement :", error);
 
         if (actif) {
           alert("Impossible de charger cette actualité.");
         }
-
       } finally {
         if (actif) {
           setChargement(false);
@@ -92,22 +91,16 @@ function ModifierActualite() {
     };
   }, [id]);
 
-  // ==================================
-  // Sélection des anciennes images
-  // ==================================
-
-  const changerSelection = (nomImage) => {
+  // Sélectionner ou désélectionner une ancienne image
+  const changerSelection = (image) => {
     setImagesConservees((precedentes) =>
-      precedentes.includes(nomImage)
-        ? precedentes.filter((nom) => nom !== nomImage)
-        : [...precedentes, nomImage]
+      precedentes.includes(image)
+        ? precedentes.filter((nom) => nom !== image)
+        : [...precedentes, image]
     );
   };
 
-  // ==================================
-  // Modifier une actualité avec CSRF
-  // ==================================
-
+  // Modifier une actualité
   const modifierActualite = async (e) => {
     e.preventDefault();
 
@@ -116,20 +109,12 @@ function ModifierActualite() {
     setEnregistrement(true);
 
     try {
-
-      // ==============================
-      // 1. VERIFIER LA SESSION
-      // ET RECUPERER LE TOKEN CSRF
-      // ==============================
-
-      const checkResponse = await fetch(
-        `${API_URL}/auth/check`,
-        {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        }
-      );
+      // 1. Vérifier la session
+      const checkResponse = await fetch(`${API_URL}/auth/check`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
 
       if (checkResponse.status === 401) {
         redirigerVersLogin();
@@ -137,111 +122,75 @@ function ModifierActualite() {
       }
 
       if (!checkResponse.ok) {
-        throw new Error(
-          "Impossible de vérifier la session."
-        );
+        throw new Error("Impossible de vérifier la session.");
       }
 
       const checkData = await checkResponse.json();
-
       const csrfToken = checkData.csrf_token;
 
       if (!csrfToken) {
-        throw new Error(
-          "Token CSRF introuvable."
-        );
+        throw new Error("Token CSRF introuvable.");
       }
 
-      // ==============================
-      // 2. PREPARER LES DONNEES
-      // ==============================
-
+      // 2. Préparer les données
       const formData = new FormData();
 
-      formData.append("titre", titre);
-      formData.append("description", description);
+      formData.append("titre", titre.trim());
+      formData.append("description", description.trim());
       formData.append("date", date);
 
-      // Activer la gestion des images
+      // Indiquer au backend que les images sont gérées
       formData.append("gestion_images", "1");
 
-      // Images anciennes à conserver
-      imagesConservees.forEach((nom) => {
-        formData.append("images_a_conserver", nom);
+      // Anciennes images à conserver
+      imagesConservees.forEach((image) => {
+        formData.append("images_a_conserver", image);
       });
 
-      // Nouvelles images à ajouter
+      // Nouvelles images
       nouvellesImages.forEach((fichier) => {
         formData.append("images", fichier);
       });
 
-      // ==============================
-      // 3. MODIFICATION AVEC CSRF
-      // ==============================
-
-      const response = await fetch(
-        `${API_URL}/actualites/${id}`,
-        {
-          method: "PUT",
-
-          credentials: "include",
-
-          headers: {
-            "X-CSRF-Token": csrfToken,
-          },
-
-          body: formData,
-        }
-      );
-
-      // ==============================
-      // 4. SESSION EXPIREE
-      // ==============================
+      // 3. Envoyer au backend
+      const response = await fetch(`${API_URL}/actualites/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "X-CSRF-Token": csrfToken,
+        },
+        body: formData,
+      });
 
       if (response.status === 401) {
         redirigerVersLogin();
         return;
       }
 
-      // ==============================
-      // 5. GESTION DES ERREURS
-      // ==============================
-
       if (!response.ok) {
-        const resultat = await response
-          .json()
-          .catch(() => ({}));
+        const resultat = await response.json().catch(() => ({}));
 
         throw new Error(
-          resultat.message || "Erreur de modification"
+          resultat.message || "Erreur lors de la modification."
         );
       }
 
-      // ==============================
-      // 6. CONFIRMATION
-      // ==============================
-
+      // 4. Confirmation
       alert("Actualité modifiée avec succès !");
 
       navigate("/admin/actualites");
-
     } catch (error) {
       console.error("Erreur modification :", error);
 
       alert(
-        error.message ||
-        "Erreur lors de la modification."
+        error.message || "Erreur lors de la modification."
       );
-
     } finally {
       setEnregistrement(false);
     }
   };
 
-  // ==================================
-  // Affichage du chargement
-  // ==================================
-
+  // Chargement
   if (chargement) {
     return (
       <div className="add-page">
@@ -252,14 +201,10 @@ function ModifierActualite() {
 
   return (
     <div className="add-page">
-
       <h1>Modifier une Actualité</h1>
 
-      <form
-        className="add-form"
-        onSubmit={modifierActualite}
-      >
-
+      <form className="add-form" onSubmit={modifierActualite}>
+        {/* TITRE */}
         <label>Titre</label>
 
         <input
@@ -269,6 +214,7 @@ function ModifierActualite() {
           required
         />
 
+        {/* DESCRIPTION */}
         <label>Description</label>
 
         <textarea
@@ -278,6 +224,7 @@ function ModifierActualite() {
           required
         />
 
+        {/* DATE */}
         <label>Date</label>
 
         <input
@@ -287,11 +234,11 @@ function ModifierActualite() {
           required
         />
 
+        {/* ANCIENNES IMAGES */}
         <label>Images actuelles</label>
 
         <p>
-          Décochez les images que vous ne souhaitez
-          plus afficher.
+          Décochez les images que vous ne souhaitez plus afficher.
         </p>
 
         <div
@@ -302,9 +249,9 @@ function ModifierActualite() {
             marginBottom: "20px",
           }}
         >
-          {anciennesImages.map((nom, index) => (
+          {anciennesImages.map((image, index) => (
             <div
-              key={nom}
+              key={`${image}-${index}`}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -313,7 +260,7 @@ function ModifierActualite() {
               }}
             >
               <img
-                src={`${API_URL}/uploads/${nom}`}
+                src={getImageUrl(image)}
                 alt={`Image ${index + 1}`}
                 style={{
                   width: "160px",
@@ -333,8 +280,8 @@ function ModifierActualite() {
               >
                 <input
                   type="checkbox"
-                  checked={imagesConservees.includes(nom)}
-                  onChange={() => changerSelection(nom)}
+                  checked={imagesConservees.includes(image)}
+                  onChange={() => changerSelection(image)}
                 />
 
                 Conserver
@@ -343,6 +290,7 @@ function ModifierActualite() {
           ))}
         </div>
 
+        {/* NOUVELLES IMAGES */}
         <label>Ajouter de nouvelles images</label>
 
         <input
@@ -358,38 +306,30 @@ function ModifierActualite() {
 
         {nouvellesImages.length > 0 && (
           <p>
-            {nouvellesImages.length} nouvelle(s)
-            image(s) sélectionnée(s).
+            {nouvellesImages.length} nouvelle(s) image(s) sélectionnée(s).
           </p>
         )}
 
+        {/* BOUTONS */}
         <div className="buttons">
-
           <button
             type="submit"
             className="btn-save"
             disabled={enregistrement}
           >
-            {enregistrement
-              ? "Modification..."
-              : "Modifier"}
+            {enregistrement ? "Modification..." : "Modifier"}
           </button>
 
           <button
             type="button"
             className="btn-cancel"
             disabled={enregistrement}
-            onClick={() =>
-              navigate("/admin/actualites")
-            }
+            onClick={() => navigate("/admin/actualites")}
           >
             Annuler
           </button>
-
         </div>
-
       </form>
-
     </div>
   );
 }
