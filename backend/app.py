@@ -35,11 +35,24 @@ load_dotenv(
 
 
 # ==================================
+# DOSSIER DES IMAGES
+# ==================================
+
+UPLOAD_FOLDER = os.environ.get(
+    "UPLOAD_FOLDER",
+    os.path.join(BASE_DIR, "uploads")
+)
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# ==================================
 # INITIALISATION FLASK
 # ==================================
 
 app = Flask(__name__)
 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 
 # ==================================
@@ -53,11 +66,9 @@ if not app.config["SECRET_KEY"]:
         "SECRET_KEY manquante dans les variables d'environnement."
     )
 
-# Configuration des cookies pour Render (HTTPS)
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
-
 
 
 # ==================================
@@ -94,40 +105,19 @@ CORS(
 @app.before_request
 def verifier_csrf():
 
-    # Autoriser les requêtes de lecture
-    # et les requêtes CORS préliminaires.
-    if request.method in (
-        "GET",
-        "HEAD",
-        "OPTIONS"
-    ):
+    if request.method in ("GET", "HEAD", "OPTIONS"):
         return None
 
-    # Autoriser la connexion.
-    if (
-        request.path == "/login"
-        and request.method == "POST"
-    ):
+    if request.path == "/login" and request.method == "POST":
         return None
 
-    # Autoriser le formulaire de contact public.
-    if (
-        request.path == "/messages"
-        and request.method == "POST"
-    ):
+    if request.path == "/messages" and request.method == "POST":
         return None
 
-    # Récupérer le token de session.
-    token_session = session.get(
-        "csrf_token"
-    )
+    token_session = session.get("csrf_token")
 
-    # Récupérer le token envoyé par React.
-    token_requete = request.headers.get(
-        "X-CSRF-Token"
-    )
+    token_requete = request.headers.get("X-CSRF-Token")
 
-    # Vérifier les deux tokens.
     if (
         not token_session
         or not token_requete
@@ -145,32 +135,14 @@ def verifier_csrf():
 
 
 # ==================================
-# DOSSIER DES IMAGES
-# ==================================
-
-UPLOAD_FOLDER = os.path.join(
-    BASE_DIR,
-    "uploads"
-)
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
-
-
-# ==================================
 # AFFICHAGE DES IMAGES
 # ==================================
 
-@app.route(
-    "/uploads/<path:filename>",
-    methods=["GET"]
-)
+@app.route("/uploads/<path:filename>", methods=["GET"])
 def uploaded_file(filename):
 
     return send_from_directory(
-        UPLOAD_FOLDER,
+        app.config["UPLOAD_FOLDER"],
         filename
     )
 
@@ -180,15 +152,10 @@ def uploaded_file(filename):
 # ==================================
 
 app.register_blueprint(actualites_bp)
-
 app.register_blueprint(projets_bp)
-
 app.register_blueprint(messages_bp)
-
 app.register_blueprint(dashboard_bp)
-
 app.register_blueprint(partenaires_bp)
-
 app.register_blueprint(auth_bp)
 
 
@@ -210,9 +177,7 @@ def home():
 
 if __name__ == "__main__":
 
-    port = int(
-        os.environ.get("PORT", 5000)
-    )
+    port = int(os.environ.get("PORT", 5000))
 
     app.run(
         host="0.0.0.0",

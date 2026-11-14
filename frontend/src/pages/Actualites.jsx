@@ -1,6 +1,16 @@
+
 import API_URL from '../services/api';
 import { useEffect, useState } from "react";
 
+function getImageUrl(image) {
+  if (!image) return "";
+
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
 
 function ActualiteCard({ actualite }) {
   const [indexImage, setIndexImage] = useState(0);
@@ -13,6 +23,8 @@ function ActualiteCard({ actualite }) {
         : [];
 
   useEffect(() => {
+    setIndexImage(0);
+
     if (images.length <= 1) return;
 
     const interval = setInterval(() => {
@@ -20,12 +32,13 @@ function ActualiteCard({ actualite }) {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [images.length]);
+  }, [actualite.id, images.length]);
+
   return (
     <div className="actualite-card">
       {images.length > 0 && (
         <img
-          src={`${API_URL}/uploads/${images[indexImage]}`}
+          src={getImageUrl(images[indexImage])}
           alt={`${actualite.titre} - Photo ${indexImage + 1}`}
           className="actualite-image"
         />

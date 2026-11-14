@@ -3,60 +3,91 @@ from flask import Blueprint, jsonify, request
 from config import get_connection
 from auth_utils import admin_required
 from werkzeug.utils import secure_filename
-from uuid import uuid4
+
+import cloudinary
+import cloudinary.uploader
 import os
 
 
 projets_bp = Blueprint("projets", __name__)
 
 
-# ==========================
-# Dossier des images
-# ==========================
+# ==========================================
+# CONFIGURATION CLOUDINARY
+# ==========================================
 
-UPLOAD_FOLDER = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    "uploads"
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
 )
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {
-    "jpg", "jpeg", "jfif", "png", "webp", "gif"
+    "jpg", "jpeg", "jfif", "png", "webp", "gif", "bmp"
 }
 
 
-# ==========================
-# Enregistrer une image
-# ==========================
+# ==========================================
+# VERIFIER LA CONFIGURATION CLOUDINARY
+# ==========================================
+
+def verifier_cloudinary():
+
+    if not all([
+        os.environ.get("CLOUDINARY_CLOUD_NAME"),
+        os.environ.get("CLOUDINARY_API_KEY"),
+        os.environ.get("CLOUDINARY_API_SECRET")
+    ]):
+        raise RuntimeError("Configuration Cloudinary manquante.")
+
+
+# ==========================================
+# ENREGISTRER UNE IMAGE SUR CLOUDINARY
+# ==========================================
 
 def enregistrer_image(fichier):
+
     if not fichier or not fichier.filename:
         return None
 
     nom_original = secure_filename(fichier.filename)
 
     if "." not in nom_original:
-        raise ValueError("Format d'image non valide")
+        raise ValueError("Format d'image non valide.")
 
     extension = nom_original.rsplit(".", 1)[1].lower()
 
     if extension not in ALLOWED_EXTENSIONS:
-        raise ValueError("Format d'image non autorisé")
+        raise ValueError(
+            f"Format d'image non autorisé : .{extension}"
+        )
 
-    nom_unique = f"{uuid4().hex}.{extension}"
+    verifier_cloudinary()
 
-    chemin = os.path.join(UPLOAD_FOLDER, nom_unique)
-    fichier.save(chemin)
+    resultat = cloudinary.uploader.upload(
+        fichier.stream,
+        folder="vftm/projets",
+        resource_type="image"
+    )
 
-    return nom_unique
+    url_image = resultat.get("secure_url")
+
+    if not url_image:
+        raise RuntimeError(
+            "Cloudinary n'a pas retourné l'URL de l'image."
+        )
+
+    return url_image
 
 
-# ==========================
-# Récupérer les images
-# ==========================
+# ==========================================
+# RECUPERER LES IMAGES D'UN PROJET
+# ==========================================
 
 def recuperer_images(cur, projet_id, image_principale):
+
     cur.execute("""
         SELECT nom_fichier
         FROM projet_images
@@ -66,20 +97,22 @@ def recuperer_images(cur, projet_id, image_principale):
 
     images = [ligne[0] for ligne in cur.fetchall()]
 
-    # Compatibilité avec les anciens projets
     if image_principale and image_principale not in images:
         images.insert(0, image_principale)
 
     return images
 
 
-# ==========================
-# Formater un projet
-# ==========================
+# ==========================================
+# FORMATER UN PROJET
+# ==========================================
 
 def formater_projet(cur, ligne):
+
     images = recuperer_images(
-        cur, ligne[0], ligne[4]
+        cur,
+        ligne[0],
+        ligne[4]
     )
 
     return {
@@ -98,13 +131,14 @@ def formater_projet(cur, ligne):
     }
 
 
-# ==========================
-# GET : Tous les projets
+# ==========================================
+# GET : TOUS LES PROJETS
 # ACCES PUBLIC
-# ==========================
+# ==========================================
 
 @projets_bp.route("/projets", methods=["GET"])
 def get_projets():
+
     conn = get_connection()
 
     try:
@@ -112,9 +146,14 @@ def get_projets():
 
         cur.execute("""
             SELECT
-                id, titre, description,
-                date_projet, image, objectifs,
-                beneficiaires, zone_intervention,
+                id,
+                titre,
+                description,
+                date_projet,
+                image,
+                objectifs,
+                beneficiaires,
+                zone_intervention,
                 partenaires
             FROM projets
             ORDER BY id DESC
@@ -129,22 +168,20 @@ def get_projets():
 
         cur.close()
 
-        return jsonify(projets)
+        return jsonify(projets), 200
 
     finally:
         conn.close()
 
 
-# ==========================
-# GET : Un projet par ID
+# ==========================================
+# GET : UN PROJET
 # ACCES PUBLIC
-# ==========================
+# ==========================================
 
-@projets_bp.route(
-    "/projets/<int:id>",
-    methods=["GET"]
-)
+@projets_bp.route("/projets/<int:id>", methods=["GET"])
 def get_projet(id):
+
     conn = get_connection()
 
     try:
@@ -152,9 +189,14 @@ def get_projet(id):
 
         cur.execute("""
             SELECT
-                id, titre, description,
-                date_projet, image, objectifs,
-                beneficiaires, zone_intervention,
+                id,
+                titre,
+                description,
+                date_projet,
+                image,
+                objectifs,
+                beneficiaires,
+                zone_intervention,
                 partenaires
             FROM projets
             WHERE id = %s
@@ -163,67 +205,76 @@ def get_projet(id):
         ligne = cur.fetchone()
 
         if ligne is None:
+            cur.close()
+
             return jsonify({
-                "message": "Projet introuvable"
+                "message": "Projet introuvable."
             }), 404
 
         projet = formater_projet(cur, ligne)
 
         cur.close()
 
-        return jsonify(projet)
+        return jsonify(projet), 200
 
     finally:
         conn.close()
 
 
-# ==========================
-# POST : Ajouter un projet
+# ==========================================
+# POST : AJOUTER UN PROJET
 # ADMIN UNIQUEMENT
-# ==========================
+# ==========================================
 
-@projets_bp.route(
-    "/projets",
-    methods=["POST"]
-)
+@projets_bp.route("/projets", methods=["POST"])
 @admin_required
 def ajouter_projet():
-    titre = request.form.get("titre")
-    description = request.form.get("description")
+
+    titre = request.form.get("titre", "").strip()
+    description = request.form.get("description", "").strip()
     date = request.form.get("date")
 
-    objectifs = request.form.get("objectifs")
-    beneficiaires = request.form.get("beneficiaires")
-    zone_intervention = request.form.get("zone_intervention")
-    partenaires = request.form.get("partenaires")
+    objectifs = request.form.get("objectifs", "")
+    beneficiaires = request.form.get("beneficiaires", "")
+    zone_intervention = request.form.get("zone_intervention", "")
+    partenaires = request.form.get("partenaires", "")
 
     if not titre:
         return jsonify({
-            "message": "Le titre du projet est obligatoire"
+            "message": "Le titre du projet est obligatoire."
         }), 400
 
     fichiers = [
-        fichier
-        for fichier in request.files.getlist("images")
-        if fichier and fichier.filename
+        f for f in request.files.getlist("images")
+        if f and f.filename
     ]
 
-    # Compatibilité avec l'ancien formulaire
     fichier_unique = request.files.get("image")
 
     if fichier_unique and fichier_unique.filename:
         fichiers.insert(0, fichier_unique)
 
+    # Envoyer les images vers Cloudinary
     try:
-        noms_images = [
-            enregistrer_image(fichier)
-            for fichier in fichiers
-        ]
+        noms_images = []
+
+        for fichier in fichiers:
+            url = enregistrer_image(fichier)
+
+            if url:
+                noms_images.append(url)
 
     except ValueError as erreur:
         return jsonify({
             "message": str(erreur)
         }), 400
+
+    except Exception as erreur:
+        print("Erreur Cloudinary :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de l'envoi des images vers Cloudinary. Vérifiez la configuration."
+        }), 502
 
     image_principale = (
         noms_images[0] if noms_images else None
@@ -236,69 +287,88 @@ def ajouter_projet():
 
         cur.execute("""
             INSERT INTO projets (
-                titre, description, date_projet,
-                image, objectifs, beneficiaires,
-                zone_intervention, partenaires
+                titre,
+                description,
+                date_projet,
+                image,
+                objectifs,
+                beneficiaires,
+                zone_intervention,
+                partenaires
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """, (
-            titre, description, date,
-            image_principale, objectifs,
-            beneficiaires, zone_intervention,
+            titre,
+            description,
+            date,
+            image_principale,
+            objectifs,
+            beneficiaires,
+            zone_intervention,
             partenaires
         ))
 
         projet_id = cur.fetchone()[0]
 
-        for ordre, nom in enumerate(noms_images):
+        for ordre, url in enumerate(noms_images):
+
             cur.execute("""
-                INSERT INTO projet_images
-                    (projet_id, nom_fichier, ordre)
+                INSERT INTO projet_images (
+                    projet_id,
+                    nom_fichier,
+                    ordre
+                )
                 VALUES (%s, %s, %s)
-            """, (projet_id, nom, ordre))
+            """, (
+                projet_id,
+                url,
+                ordre
+            ))
 
         conn.commit()
         cur.close()
 
         return jsonify({
-            "message": "Projet ajouté avec succès",
+            "message": "Projet ajouté avec succès.",
             "id": projet_id,
             "image": image_principale,
             "images": noms_images
         }), 201
 
-    except Exception:
+    except Exception as erreur:
         conn.rollback()
-        raise
+        print("Erreur ajout projet :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de l'enregistrement du projet dans la base de données."
+        }), 500
 
     finally:
         conn.close()
 
 
-# ==========================
-# PUT : Modifier un projet
+# ==========================================
+# PUT : MODIFIER UN PROJET
 # ADMIN UNIQUEMENT
-# ==========================
+# ==========================================
 
-@projets_bp.route(
-    "/projets/<int:id>",
-    methods=["PUT"]
-)
+@projets_bp.route("/projets/<int:id>", methods=["PUT"])
 @admin_required
 def modifier_projet(id):
-    titre = request.form.get("titre")
-    description = request.form.get("description")
+
+    titre = request.form.get("titre", "").strip()
+    description = request.form.get("description", "").strip()
     date = request.form.get("date")
 
-    objectifs = request.form.get("objectifs")
-    beneficiaires = request.form.get("beneficiaires")
-    zone_intervention = request.form.get("zone_intervention")
-    partenaires = request.form.get("partenaires")
+    objectifs = request.form.get("objectifs", "")
+    beneficiaires = request.form.get("beneficiaires", "")
+    zone_intervention = request.form.get("zone_intervention", "")
+    partenaires = request.form.get("partenaires", "")
 
     if not titre:
         return jsonify({
-            "message": "Le titre du projet est obligatoire"
+            "message": "Le titre du projet est obligatoire."
         }), 400
 
     images_a_conserver = request.form.getlist(
@@ -306,12 +376,10 @@ def modifier_projet(id):
     )
 
     nouveaux_fichiers = [
-        fichier
-        for fichier in request.files.getlist("images")
-        if fichier and fichier.filename
+        f for f in request.files.getlist("images")
+        if f and f.filename
     ]
 
-    # Compatibilité avec l'ancien formulaire
     fichier_unique = request.files.get("image")
 
     if fichier_unique and fichier_unique.filename:
@@ -322,6 +390,7 @@ def modifier_projet(id):
     try:
         cur = conn.cursor()
 
+        # Vérifier que le projet existe
         cur.execute("""
             SELECT image
             FROM projets
@@ -332,32 +401,43 @@ def modifier_projet(id):
         ligne = cur.fetchone()
 
         if ligne is None:
+            cur.close()
+
             return jsonify({
-                "message": "Projet introuvable"
+                "message": "Projet introuvable."
             }), 404
 
         ancienne_image = ligne[0]
 
+        # Récupérer les images existantes
         images_existantes = recuperer_images(
-            cur, id, ancienne_image
+            cur,
+            id,
+            ancienne_image
         )
 
-        # Ancien formulaire : conserver les images
+        # Déterminer les images à conserver
         if "gestion_images" not in request.form:
+
             images_conservees = images_existantes
 
         else:
+
             images_conservees = [
-                nom
-                for nom in images_existantes
-                if nom in images_a_conserver
+                image
+                for image in images_existantes
+                if image in images_a_conserver
             ]
 
+        # Envoyer les nouvelles images vers Cloudinary
         try:
-            nouvelles_images = [
-                enregistrer_image(fichier)
-                for fichier in nouveaux_fichiers
-            ]
+            nouvelles_images = []
+
+            for fichier in nouveaux_fichiers:
+                url = enregistrer_image(fichier)
+
+                if url:
+                    nouvelles_images.append(url)
 
         except ValueError as erreur:
             conn.rollback()
@@ -366,28 +446,44 @@ def modifier_projet(id):
                 "message": str(erreur)
             }), 400
 
-        images_finales = (
-            images_conservees + nouvelles_images
-        )
+        except Exception as erreur:
+            conn.rollback()
+            print("Erreur Cloudinary :", erreur)
 
-        # Remplacer les associations d'images
+            return jsonify({
+                "message": "Erreur lors de l'envoi des nouvelles images vers Cloudinary."
+            }), 502
+
+        # Combiner les anciennes et les nouvelles images
+        images_finales = images_conservees + nouvelles_images
+
+        # Supprimer les anciennes références
         cur.execute("""
             DELETE FROM projet_images
             WHERE projet_id = %s
         """, (id,))
 
-        for ordre, nom in enumerate(images_finales):
+        # Enregistrer les images finales
+        for ordre, url in enumerate(images_finales):
+
             cur.execute("""
-                INSERT INTO projet_images
-                    (projet_id, nom_fichier, ordre)
+                INSERT INTO projet_images (
+                    projet_id,
+                    nom_fichier,
+                    ordre
+                )
                 VALUES (%s, %s, %s)
-            """, (id, nom, ordre))
+            """, (
+                id,
+                url,
+                ordre
+            ))
 
         image_principale = (
-            images_finales[0]
-            if images_finales else None
+            images_finales[0] if images_finales else None
         )
 
+        # Mettre à jour le projet
         cur.execute("""
             UPDATE projets
             SET
@@ -401,40 +497,47 @@ def modifier_projet(id):
                 partenaires = %s
             WHERE id = %s
         """, (
-            titre, description, date,
-            image_principale, objectifs,
-            beneficiaires, zone_intervention,
-            partenaires, id
+            titre,
+            description,
+            date,
+            image_principale,
+            objectifs,
+            beneficiaires,
+            zone_intervention,
+            partenaires,
+            id
         ))
 
         conn.commit()
         cur.close()
 
         return jsonify({
-            "message": "Projet modifié avec succès",
+            "message": "Projet modifié avec succès.",
             "image": image_principale,
             "images": images_finales
-        })
+        }), 200
 
-    except Exception:
+    except Exception as erreur:
         conn.rollback()
-        raise
+        print("Erreur modification projet :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de la modification du projet."
+        }), 500
 
     finally:
         conn.close()
 
 
-# ==========================
-# DELETE : Supprimer un projet
+# ==========================================
+# DELETE : SUPPRIMER UN PROJET
 # ADMIN UNIQUEMENT
-# ==========================
+# ==========================================
 
-@projets_bp.route(
-    "/projets/<int:id>",
-    methods=["DELETE"]
-)
+@projets_bp.route("/projets/<int:id>", methods=["DELETE"])
 @admin_required
 def supprimer_projet(id):
+
     conn = get_connection()
 
     try:
@@ -450,21 +553,26 @@ def supprimer_projet(id):
 
         if ligne is None:
             conn.rollback()
+            cur.close()
 
             return jsonify({
-                "message": "Projet introuvable"
+                "message": "Projet introuvable."
             }), 404
 
         conn.commit()
         cur.close()
 
         return jsonify({
-            "message": "Projet supprimé avec succès"
-        })
+            "message": "Projet supprimé avec succès."
+        }), 200
 
-    except Exception:
+    except Exception as erreur:
         conn.rollback()
-        raise
+        print("Erreur suppression projet :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de la suppression du projet."
+        }), 500
 
     finally:
         conn.close()

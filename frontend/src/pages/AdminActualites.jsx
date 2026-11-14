@@ -1,4 +1,5 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,7 +20,16 @@ import AdminHeader from "../components/AdminHeader";
 
 import "./Admin.css";
 
+// Mampiseho sary Cloudinary na sary taloha ao amin'ny uploads
+function getImageUrl(image) {
+  if (!image) return "";
 
+  if (image.startsWith("http://") || image.startsWith("https://")) {
+    return image;
+  }
+
+  return `${API_URL}/uploads/${image}`;
+}
 
 function AdminActualites() {
   const navigate = useNavigate();
@@ -31,32 +41,22 @@ function AdminActualites() {
   const [typeMessage, setTypeMessage] = useState("");
   const [suppressionEnCours, setSuppressionEnCours] = useState(false);
 
-  // ================================
   // Session expirée
-  // ================================
-
   const redirigerVersLogin = () => {
     localStorage.removeItem("user");
 
-    alert(
-      "Votre session a expiré. Veuillez vous reconnecter."
-    );
+    alert("Votre session a expiré. Veuillez vous reconnecter.");
 
     navigate("/login", { replace: true });
   };
 
-  // ================================
   // Charger les actualités
-  // ================================
-
   useEffect(() => {
     let actif = true;
 
     const chargerActualites = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/actualites`
-        );
+        const response = await fetch(`${API_URL}/actualites`);
 
         if (!response.ok) {
           throw new Error("Erreur lors du chargement");
@@ -67,15 +67,11 @@ function AdminActualites() {
         if (actif) {
           setActualites(data);
         }
-
       } catch (error) {
         console.error("Erreur :", error);
 
         if (actif) {
-          setMessage(
-            "Impossible de charger les actualités."
-          );
-
+          setMessage("Impossible de charger les actualités.");
           setTypeMessage("erreur");
         }
       }
@@ -88,10 +84,7 @@ function AdminActualites() {
     };
   }, []);
 
-  // ================================
   // Supprimer une actualité
-  // ================================
-
   const supprimerActualite = async () => {
     if (!actualiteASupprimer || suppressionEnCours) {
       return;
@@ -101,20 +94,12 @@ function AdminActualites() {
     setMessage("");
 
     try {
-
-      // ================================
-      // 1. Vérifier la session et
-      // récupérer le token CSRF
-      // ================================
-
-      const checkResponse = await fetch(
-        `${API_URL}/auth/check`,
-        {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-        }
-      );
+      // Vérifier la session et récupérer le token CSRF
+      const checkResponse = await fetch(`${API_URL}/auth/check`, {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
 
       if (checkResponse.status === 401) {
         setActualiteASupprimer(null);
@@ -123,24 +108,17 @@ function AdminActualites() {
       }
 
       if (!checkResponse.ok) {
-        throw new Error(
-          "Impossible de vérifier la session."
-        );
+        throw new Error("Impossible de vérifier la session.");
       }
 
       const checkData = await checkResponse.json();
       const csrfToken = checkData.csrf_token;
 
       if (!csrfToken) {
-        throw new Error(
-          "Token CSRF introuvable."
-        );
+        throw new Error("Token CSRF introuvable.");
       }
 
-      // ================================
-      // 2. Supprimer avec session + CSRF
-      // ================================
-
+      // Supprimer avec session + CSRF
       const response = await fetch(
         `${API_URL}/actualites/${actualiteASupprimer.id}`,
         {
@@ -159,46 +137,30 @@ function AdminActualites() {
       }
 
       if (!response.ok) {
-        const resultat = await response
-          .json()
-          .catch(() => ({}));
+        const resultat = await response.json().catch(() => ({}));
 
         throw new Error(
-          resultat.message ||
-          "Erreur lors de la suppression"
+          resultat.message || "Erreur lors de la suppression"
         );
       }
 
-      // ================================
-      // 3. Actualiser le tableau
-      // ================================
-
+      // Actualiser le tableau
       setActualites((anciennes) =>
-        anciennes.filter(
-          (actu) =>
-            actu.id !== actualiteASupprimer.id
-        )
+        anciennes.filter((actu) => actu.id !== actualiteASupprimer.id)
       );
 
-      // Fermer la confirmation
       setActualiteASupprimer(null);
 
-      // Notification
-      setMessage(
-        "Actualité supprimée avec succès !"
-      );
+      setMessage("Actualité supprimée avec succès !");
       setTypeMessage("succes");
-
     } catch (error) {
       console.error("Erreur :", error);
 
       setMessage(
-        error.message ||
-        "Impossible de supprimer cette actualité."
+        error.message || "Impossible de supprimer cette actualité."
       );
 
       setTypeMessage("erreur");
-
     } finally {
       setSuppressionEnCours(false);
     }
@@ -206,11 +168,9 @@ function AdminActualites() {
 
   return (
     <div className="admin-page">
-
       <AdminSidebar />
 
       <div className="admin-content">
-
         <AdminHeader />
 
         <h1 className="admin-title">
@@ -228,7 +188,6 @@ function AdminActualites() {
 
         <div className="actualite-table-container">
           <table className="admin-table">
-
             <thead>
               <tr>
                 <th>ID</th>
@@ -243,17 +202,13 @@ function AdminActualites() {
             <tbody>
               {actualites.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan="6"
-                    className="actualite-empty"
-                  >
+                  <td colSpan="6" className="actualite-empty">
                     Aucune actualité disponible.
                   </td>
                 </tr>
               ) : (
                 actualites.map((actu) => (
                   <tr key={actu.id}>
-
                     <td>{actu.id}</td>
 
                     <td>{actu.titre}</td>
@@ -267,7 +222,7 @@ function AdminActualites() {
                     <td>
                       {actu.image ? (
                         <img
-                          src={`${API_URL}/uploads/${actu.image}`}
+                          src={getImageUrl(actu.image)}
                           alt={actu.titre}
                           className="actualite-image"
                         />
@@ -281,7 +236,6 @@ function AdminActualites() {
 
                     <td>
                       <div className="actualite-actions">
-
                         <Link
                           to={`/admin/actualites/modifier/${actu.id}`}
                           className="btn-edit actualite-action-btn"
@@ -293,31 +247,22 @@ function AdminActualites() {
                         <button
                           type="button"
                           className="btn-delete actualite-action-btn"
-                          onClick={() =>
-                            setActualiteASupprimer(actu)
-                          }
+                          onClick={() => setActualiteASupprimer(actu)}
                         >
                           <Trash2 size={16} />
                           Supprimer
                         </button>
-
                       </div>
                     </td>
-
                   </tr>
                 ))
               )}
             </tbody>
-
           </table>
         </div>
-
       </div>
 
-      {/* ================================
-          FENETRE DE CONFIRMATION
-      ================================ */}
-
+      {/* Fenêtre de confirmation */}
       {actualiteASupprimer && (
         <div
           className="actualite-modal-overlay"
@@ -334,15 +279,12 @@ function AdminActualites() {
             aria-labelledby="actualite-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-
             <button
               type="button"
               className="actualite-modal-close"
               aria-label="Fermer"
               disabled={suppressionEnCours}
-              onClick={() =>
-                setActualiteASupprimer(null)
-              }
+              onClick={() => setActualiteASupprimer(null)}
             >
               <X size={20} />
             </button>
@@ -356,23 +298,17 @@ function AdminActualites() {
             </h2>
 
             <p>
-              Voulez-vous vraiment supprimer
-              l’actualité{" "}
-              <strong>
-                « {actualiteASupprimer.titre} »
-              </strong>{" "}
-              ? Cette action est définitive.
+              Voulez-vous vraiment supprimer l’actualité{" "}
+              <strong>« {actualiteASupprimer.titre} »</strong> ?
+              Cette action est définitive.
             </p>
 
             <div className="actualite-modal-actions">
-
               <button
                 type="button"
                 className="actualite-cancel-btn"
                 disabled={suppressionEnCours}
-                onClick={() =>
-                  setActualiteASupprimer(null)
-                }
+                onClick={() => setActualiteASupprimer(null)}
               >
                 Annuler
               </button>
@@ -384,22 +320,16 @@ function AdminActualites() {
                 onClick={supprimerActualite}
               >
                 <Trash2 size={17} />
-
                 {suppressionEnCours
                   ? "Suppression..."
                   : "Oui, supprimer"}
               </button>
-
             </div>
-
           </div>
         </div>
       )}
 
-      {/* ================================
-          NOTIFICATION
-      ================================ */}
-
+      {/* Notification */}
       {message && (
         <div
           className={`actualite-toast ${
@@ -424,10 +354,8 @@ function AdminActualites() {
           >
             <X size={18} />
           </button>
-
         </div>
       )}
-
     </div>
   );
 }

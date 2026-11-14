@@ -1,4 +1,5 @@
-import API_URL from '../services/api';
+
+import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,7 +20,24 @@ import AdminHeader from "../components/AdminHeader";
 
 import "./Admin.css";
 
+// ==================================
+// GERER LES URL DES IMAGES
+// ==================================
 
+function getImageUrl(image) {
+  if (!image) return "";
+
+  // Image déjà hébergée sur Cloudinary
+  if (
+    image.startsWith("http://") ||
+    image.startsWith("https://")
+  ) {
+    return image;
+  }
+
+  // Ancienne image enregistrée dans le dossier uploads
+  return `${API_URL}/uploads/${image}`;
+}
 
 function AdminProjets() {
   const navigate = useNavigate();
@@ -53,9 +71,7 @@ function AdminProjets() {
 
     const chargerProjets = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/projets`
-        );
+        const response = await fetch(`${API_URL}/projets`);
 
         if (!response.ok) {
           throw new Error("Erreur lors du chargement");
@@ -64,16 +80,13 @@ function AdminProjets() {
         const data = await response.json();
 
         if (actif) {
-          setProjets(data);
+          setProjets(Array.isArray(data) ? data : []);
         }
-
       } catch (error) {
         console.error("Erreur :", error);
 
         if (actif) {
-          setMessage(
-            "Impossible de charger les projets."
-          );
+          setMessage("Impossible de charger les projets.");
           setTypeMessage("erreur");
         }
       }
@@ -99,11 +112,7 @@ function AdminProjets() {
     setMessage("");
 
     try {
-
-      // ==============================
-      // 1. VERIFIER LA SESSION
-      // ET RECUPERER LE TOKEN CSRF
-      // ==============================
+      // 1. Vérifier la session et récupérer le token CSRF
 
       const checkResponse = await fetch(
         `${API_URL}/auth/check`,
@@ -127,18 +136,13 @@ function AdminProjets() {
       }
 
       const checkData = await checkResponse.json();
-
       const csrfToken = checkData.csrf_token;
 
       if (!csrfToken) {
-        throw new Error(
-          "Token CSRF introuvable."
-        );
+        throw new Error("Token CSRF introuvable.");
       }
 
-      // ==============================
-      // 2. SUPPRIMER AVEC SESSION + CSRF
-      // ==============================
+      // 2. Supprimer le projet avec session et CSRF
 
       const response = await fetch(
         `${API_URL}/projets/${projetASupprimer.id}`,
@@ -151,9 +155,7 @@ function AdminProjets() {
         }
       );
 
-      // ==============================
-      // 3. SESSION EXPIREE
-      // ==============================
+      // 3. Vérifier si la session a expiré
 
       if (response.status === 401) {
         setProjetASupprimer(null);
@@ -161,9 +163,7 @@ function AdminProjets() {
         return;
       }
 
-      // ==============================
-      // 4. GESTION DES ERREURS
-      // ==============================
+      // 4. Gérer les erreurs
 
       if (!response.ok) {
         const resultat = await response
@@ -176,9 +176,7 @@ function AdminProjets() {
         );
       }
 
-      // ==============================
-      // 5. ACTUALISER LE TABLEAU
-      // ==============================
+      // 5. Actualiser le tableau
 
       setProjets((anciens) =>
         anciens.filter(
@@ -187,20 +185,12 @@ function AdminProjets() {
         )
       );
 
-      // Fermer la fenêtre
       setProjetASupprimer(null);
-
-      // Notification
-      setMessage(
-        "Projet supprimé avec succès !"
-      );
+      setMessage("Projet supprimé avec succès !");
       setTypeMessage("succes");
 
     } catch (error) {
-      console.error(
-        "Erreur suppression :",
-        error
-      );
+      console.error("Erreur suppression :", error);
 
       setMessage(
         error.message ||
@@ -213,6 +203,10 @@ function AdminProjets() {
       setSuppressionEnCours(false);
     }
   };
+
+  // ==================================
+  // AFFICHAGE
+  // ==================================
 
   return (
     <div className="admin-page">
@@ -237,6 +231,7 @@ function AdminProjets() {
         </Link>
 
         <div className="actualite-table-container">
+
           <table className="admin-table">
 
             <thead>
@@ -251,6 +246,7 @@ function AdminProjets() {
             </thead>
 
             <tbody>
+
               {projets.length === 0 ? (
                 <tr>
                   <td
@@ -272,14 +268,19 @@ function AdminProjets() {
                       {projet.description}
                     </td>
 
-                    <td>{projet.date}</td>
+                    <td>
+                      {projet.date || projet.date_projet || ""}
+                    </td>
 
                     <td>
                       {projet.image ? (
                         <img
-                          src={`${API_URL}/uploads/${projet.image}`}
-                          alt={projet.titre}
+                          src={getImageUrl(projet.image)}
+                          alt={projet.titre || "Image du projet"}
                           className="actualite-image"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
                         />
                       ) : (
                         <span className="actualite-no-image">
@@ -318,9 +319,11 @@ function AdminProjets() {
                   </tr>
                 ))
               )}
+
             </tbody>
 
           </table>
+
         </div>
 
       </div>
@@ -338,6 +341,7 @@ function AdminProjets() {
             }
           }}
         >
+
           <div
             className="actualite-modal"
             role="dialog"
@@ -351,9 +355,7 @@ function AdminProjets() {
               className="actualite-modal-close"
               aria-label="Fermer"
               disabled={suppressionEnCours}
-              onClick={() =>
-                setProjetASupprimer(null)
-              }
+              onClick={() => setProjetASupprimer(null)}
             >
               <X size={20} />
             </button>
@@ -381,9 +383,7 @@ function AdminProjets() {
                 type="button"
                 className="actualite-cancel-btn"
                 disabled={suppressionEnCours}
-                onClick={() =>
-                  setProjetASupprimer(null)
-                }
+                onClick={() => setProjetASupprimer(null)}
               >
                 Annuler
               </button>
@@ -404,6 +404,7 @@ function AdminProjets() {
             </div>
 
           </div>
+
         </div>
       )}
 
@@ -420,6 +421,7 @@ function AdminProjets() {
           }`}
           role="status"
         >
+
           {typeMessage === "erreur" ? (
             <AlertTriangle size={20} />
           ) : (

@@ -1,32 +1,61 @@
+
 from flask import Blueprint, jsonify, request
 from config import get_connection
 from auth_utils import admin_required
 from werkzeug.utils import secure_filename
-from uuid import uuid4
+
+import cloudinary
+import cloudinary.uploader
 import os
 
+
 actualites_bp = Blueprint("actualites", __name__)
-# Dossier des images
-UPLOAD_FOLDER = os.path.join(
-    os.path.dirname(os.path.dirname(__file__)),
-    "uploads"
+
+
+# ==========================================
+# CONFIGURATION CLOUDINARY
+# ==========================================
+
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
 )
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 
 ALLOWED_EXTENSIONS = {
     "jpg", "jpeg", "png", "webp", "gif",
     "jfif", "bmp"
 }
 
-# Enregistrer une image
+
+# ==========================================
+# VERIFIER LA CONFIGURATION CLOUDINARY
+# ==========================================
+
+def verifier_cloudinary():
+    if not all([
+        os.environ.get("CLOUDINARY_CLOUD_NAME"),
+        os.environ.get("CLOUDINARY_API_KEY"),
+        os.environ.get("CLOUDINARY_API_SECRET")
+    ]):
+        raise RuntimeError("Configuration Cloudinary manquante.")
+
+
+# ==========================================
+# ENREGISTRER UNE IMAGE SUR CLOUDINARY
+# ==========================================
+
 def enregistrer_image(fichier):
+
     if not fichier or not fichier.filename:
         return None
 
     nom_original = secure_filename(fichier.filename)
 
     if "." not in nom_original:
-        raise ValueError("Format d'image non valide")
+        raise ValueError("Format d'image non valide.")
 
     extension = nom_original.rsplit(".", 1)[1].lower()
 
@@ -35,28 +64,28 @@ def enregistrer_image(fichier):
             f"Format d'image non autorisé : .{extension}"
         )
 
-    nom_unique = f"{uuid4().hex}.{extension}"
+    verifier_cloudinary()
 
-    chemin = os.path.join(
-        UPLOAD_FOLDER,
-        nom_unique
+    resultat = cloudinary.uploader.upload(
+        fichier.stream,
+        folder="vftm/actualites",
+        resource_type="image"
     )
 
-    fichier.save(chemin)
+    url_image = resultat.get("secure_url")
 
-    return nom_unique
+    if not url_image:
+        raise RuntimeError("Cloudinary n'a pas retourné l'URL de l'image.")
+
+    return url_image
 
 
+# ==========================================
+# RECUPERER LES IMAGES D'UNE ACTUALITE
+# ==========================================
 
-# ==========================
-# Récupérer les images
-# ==========================
+def recuperer_images(cur, actualite_id, image_principale):
 
-def recuperer_images(
-    cur,
-    actualite_id,
-    image_principale
-):
     cur.execute("""
         SELECT nom_fichier
         FROM actualite_images
@@ -64,26 +93,20 @@ def recuperer_images(
         ORDER BY ordre ASC, id ASC
     """, (actualite_id,))
 
-    images = [
-        ligne[0]
-        for ligne in cur.fetchall()
-    ]
+    images = [ligne[0] for ligne in cur.fetchall()]
 
-    # Compatibilité avec les anciennes actualités
-    if (
-        image_principale
-        and image_principale not in images
-    ):
+    if image_principale and image_principale not in images:
         images.insert(0, image_principale)
 
     return images
 
 
-# ==========================
-# Formater une actualité
-# ==========================
+# ==========================================
+# FORMATER UNE ACTUALITE
+# ==========================================
 
 def formater_actualite(cur, ligne):
+
     images = recuperer_images(
         cur,
         ligne[0],
@@ -102,16 +125,14 @@ def formater_actualite(cur, ligne):
     }
 
 
-# ==========================
-# GET : Toutes les actualités
-# ACCÈS PUBLIC
-# ==========================
+# ==========================================
+# GET : TOUTES LES ACTUALITES
+# ACCES PUBLIC
+# ==========================================
 
-@actualites_bp.route(
-    "/actualites",
-    methods=["GET"]
-)
+@actualites_bp.route("/actualites", methods=["GET"])
 def get_actualites():
+
     conn = get_connection()
 
     try:
@@ -133,22 +154,20 @@ def get_actualites():
 
         cur.close()
 
-        return jsonify(actualites)
+        return jsonify(actualites), 200
 
     finally:
         conn.close()
 
 
-# ==========================
-# GET : Une actualité
-# ACCÈS PUBLIC
-# ==========================
+# ==========================================
+# GET : UNE ACTUALITE
+# ACCES PUBLIC
+# ==========================================
 
-@actualites_bp.route(
-    "/actualites/<int:id>",
-    methods=["GET"]
-)
+@actualites_bp.route("/actualites/<int:id>", methods=["GET"])
 def get_actualite(id):
+
     conn = get_connection()
 
     try:
@@ -167,53 +186,71 @@ def get_actualite(id):
             cur.close()
 
             return jsonify({
-                "message": "Actualité introuvable"
+                "message": "Actualité introuvable."
             }), 404
 
-        actualite = formater_actualite(
-            cur,
-            ligne
-        )
+        actualite = formater_actualite(cur, ligne)
 
         cur.close()
 
-        return jsonify(actualite)
+        return jsonify(actualite), 200
 
     finally:
         conn.close()
-# POST : Ajouter une actualité
-@actualites_bp.route(
-    "/actualites",
-    methods=["POST"]
-)
+
+
+# ==========================================
+# POST : AJOUTER UNE ACTUALITE
+# ADMIN UNIQUEMENT
+# ==========================================
+
+@actualites_bp.route("/actualites", methods=["POST"])
 @admin_required
 def ajouter_actualite():
-    titre = request.form.get("titre")
-    description = request.form.get("description")
+
+    titre = request.form.get("titre", "").strip()
+    description = request.form.get("description", "").strip()
     date = request.form.get("date")
 
+    if not titre or not description or not date:
+        return jsonify({
+            "message": "Veuillez remplir tous les champs obligatoires."
+        }), 400
+
     fichiers = [
-        fichier
-        for fichier in request.files.getlist("images")
-        if fichier and fichier.filename
+        f for f in request.files.getlist("images")
+        if f and f.filename
     ]
+
     fichier_unique = request.files.get("image")
 
     if fichier_unique and fichier_unique.filename:
         fichiers.insert(0, fichier_unique)
+
+    # Envoyer les images vers Cloudinary
     try:
-        noms_images = [
-            enregistrer_image(fichier)
-            for fichier in fichiers
-        ]
+        noms_images = []
+
+        for fichier in fichiers:
+            url = enregistrer_image(fichier)
+
+            if url:
+                noms_images.append(url)
+
     except ValueError as erreur:
         return jsonify({
             "message": str(erreur)
         }), 400
 
+    except Exception as erreur:
+        print("Erreur Cloudinary :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de l'envoi des images vers Cloudinary. Vérifiez la configuration."
+        }), 502
+
     image_principale = (
-        noms_images[0]
-        if noms_images else None
+        noms_images[0] if noms_images else None
     )
 
     conn = get_connection()
@@ -235,14 +272,14 @@ def ajouter_actualite():
 
         actualite_id = cur.fetchone()[0]
 
-        for ordre, nom in enumerate(noms_images):
+        for ordre, url in enumerate(noms_images):
             cur.execute("""
                 INSERT INTO actualite_images
                     (actualite_id, nom_fichier, ordre)
                 VALUES (%s, %s, %s)
             """, (
                 actualite_id,
-                nom,
+                url,
                 ordre
             ))
 
@@ -250,61 +287,62 @@ def ajouter_actualite():
         cur.close()
 
         return jsonify({
-            "message": "Actualité ajoutée avec succès",
+            "message": "Actualité ajoutée avec succès.",
             "id": actualite_id,
             "image": image_principale,
             "images": noms_images
         }), 201
 
-    except Exception:
+    except Exception as erreur:
         conn.rollback()
-        raise
+        print("Erreur ajout actualité :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de l'enregistrement de l'actualité dans la base de données."
+        }), 500
 
     finally:
         conn.close()
 
 
-# ==========================
-# PUT : Modifier une actualité
+# ==========================================
+# PUT : MODIFIER UNE ACTUALITE
 # ADMIN UNIQUEMENT
-# ==========================
+# ==========================================
 
-@actualites_bp.route(
-    "/actualites/<int:id>",
-    methods=["PUT"]
-)
+@actualites_bp.route("/actualites/<int:id>", methods=["PUT"])
 @admin_required
 def modifier_actualite(id):
-    titre = request.form.get("titre")
-    description = request.form.get("description")
+
+    titre = request.form.get("titre", "").strip()
+    description = request.form.get("description", "").strip()
     date = request.form.get("date")
 
-    # Images anciennes à conserver
+    if not titre or not description or not date:
+        return jsonify({
+            "message": "Veuillez remplir tous les champs obligatoires."
+        }), 400
+
     images_a_conserver = request.form.getlist(
         "images_a_conserver"
     )
 
-    # Images nouvelles
     nouveaux_fichiers = [
-        fichier
-        for fichier in request.files.getlist("images")
-        if fichier and fichier.filename
+        f for f in request.files.getlist("images")
+        if f and f.filename
     ]
 
-    # Compatibilité avec l'ancien formulaire
     fichier_unique = request.files.get("image")
 
     if fichier_unique and fichier_unique.filename:
-        nouveaux_fichiers.insert(
-            0,
-            fichier_unique
-        )
+        nouveaux_fichiers.insert(0, fichier_unique)
 
     conn = get_connection()
 
     try:
         cur = conn.cursor()
 
+        # Vérifier que l'actualité existe
         cur.execute("""
             SELECT image
             FROM actualites
@@ -318,65 +356,83 @@ def modifier_actualite(id):
             cur.close()
 
             return jsonify({
-                "message": "Actualité introuvable"
+                "message": "Actualité introuvable."
             }), 404
 
         ancienne_image = ligne[0]
 
+        # Récupérer les anciennes images
         images_existantes = recuperer_images(
             cur,
             id,
             ancienne_image
         )
 
-        # Compatibilité avec l'ancien formulaire
+        # Déterminer les images à conserver
         if "gestion_images" not in request.form:
+
             images_conservees = images_existantes
 
         else:
+
             images_conservees = [
-                nom
-                for nom in images_existantes
-                if nom in images_a_conserver
+                image
+                for image in images_existantes
+                if image in images_a_conserver
             ]
 
-        # Enregistrer les nouvelles images
-        nouvelles_images = [
-            enregistrer_image(fichier)
-            for fichier in nouveaux_fichiers
-        ]
+        # Envoyer les nouvelles images vers Cloudinary
+        try:
+            nouvelles_images = []
 
-        # Liste finale des images
-        images_finales = (
-            images_conservees
-            + nouvelles_images
-        )
+            for fichier in nouveaux_fichiers:
+                url = enregistrer_image(fichier)
 
-        # Supprimer les anciennes associations
-        # sans supprimer les fichiers physiques
+                if url:
+                    nouvelles_images.append(url)
+
+        except ValueError as erreur:
+            conn.rollback()
+
+            return jsonify({
+                "message": str(erreur)
+            }), 400
+
+        except Exception as erreur:
+            conn.rollback()
+            print("Erreur Cloudinary :", erreur)
+
+            return jsonify({
+                "message": "Erreur lors de l'envoi des nouvelles images vers Cloudinary."
+            }), 502
+
+        # Combiner les images conservées et les nouvelles
+        images_finales = images_conservees + nouvelles_images
+
+        # Supprimer les anciennes références dans la table images
         cur.execute("""
             DELETE FROM actualite_images
             WHERE actualite_id = %s
         """, (id,))
 
-        # Enregistrer les images choisies
-        for ordre, nom in enumerate(images_finales):
+        # Réenregistrer les images dans le bon ordre
+        for ordre, url in enumerate(images_finales):
+
             cur.execute("""
                 INSERT INTO actualite_images
                     (actualite_id, nom_fichier, ordre)
                 VALUES (%s, %s, %s)
             """, (
                 id,
-                nom,
+                url,
                 ordre
             ))
 
-        # Définir l'image principale
         image_principale = (
-            images_finales[0]
-            if images_finales else None
+            images_finales[0] if images_finales else None
         )
 
+        # Mettre à jour l'actualité
         cur.execute("""
             UPDATE actualites
             SET titre = %s,
@@ -396,37 +452,32 @@ def modifier_actualite(id):
         cur.close()
 
         return jsonify({
-            "message": "Actualité modifiée avec succès",
+            "message": "Actualité modifiée avec succès.",
             "image": image_principale,
             "images": images_finales
-        })
+        }), 200
 
-    except ValueError as erreur:
+    except Exception as erreur:
         conn.rollback()
+        print("Erreur modification actualité :", erreur)
 
         return jsonify({
-            "message": str(erreur)
-        }), 400
-
-    except Exception:
-        conn.rollback()
-        raise
+            "message": "Erreur lors de la modification de l'actualité."
+        }), 500
 
     finally:
         conn.close()
 
 
-# ==========================
-# DELETE : Supprimer une actualité
+# ==========================================
+# DELETE : SUPPRIMER UNE ACTUALITE
 # ADMIN UNIQUEMENT
-# ==========================
+# ==========================================
 
-@actualites_bp.route(
-    "/actualites/<int:id>",
-    methods=["DELETE"]
-)
+@actualites_bp.route("/actualites/<int:id>", methods=["DELETE"])
 @admin_required
 def supprimer_actualite(id):
+
     conn = get_connection()
 
     try:
@@ -437,16 +488,28 @@ def supprimer_actualite(id):
             WHERE id = %s
         """, (id,))
 
+        if cur.rowcount == 0:
+            conn.rollback()
+            cur.close()
+
+            return jsonify({
+                "message": "Actualité introuvable."
+            }), 404
+
         conn.commit()
         cur.close()
 
         return jsonify({
-            "message": "Actualité supprimée avec succès"
-        })
+            "message": "Actualité supprimée avec succès."
+        }), 200
 
-    except Exception:
+    except Exception as erreur:
         conn.rollback()
-        raise
+        print("Erreur suppression actualité :", erreur)
+
+        return jsonify({
+            "message": "Erreur lors de la suppression de l'actualité."
+        }), 500
 
     finally:
         conn.close()
