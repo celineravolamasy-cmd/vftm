@@ -71,17 +71,24 @@ app.config["SESSION_COOKIE_SECURE"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"
 
 
+
 # ==================================
 # CONFIGURATION CORS
 # ==================================
 
 CORS(
     app,
-    origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://vftm-frontend.onrender.com"
-    ],
+    resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://vftm-frontend.onrender.com",
+                "https://vftm.mg",
+                "https://www.vftm.mg"
+            ]
+        }
+    },
     supports_credentials=True,
     allow_headers=[
         "Content-Type",

@@ -17,4 +17,6 @@ dist/
 # Logs et fichiers temporaires
 *.log
 .DS_Store
-Thumbs.db
+Thumbs.dbbackend.zip
+
+/backend.zip
