@@ -1,6 +1,7 @@
 
 import API_URL from '../services/api';
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function getImageUrl(image) {
   if (!image) return "";
@@ -14,6 +15,7 @@ function getImageUrl(image) {
 
 function ActualiteCard({ actualite }) {
   const [indexImage, setIndexImage] = useState(0);
+  const navigate = useNavigate();
 
   const images =
     actualite.images?.length > 0
@@ -33,6 +35,14 @@ function ActualiteCard({ actualite }) {
 
     return () => clearInterval(interval);
   }, [actualite.id, images.length]);
+
+  const handleContact = () => {
+    navigate("/contact", {
+      state: {
+        sujet: `Demande concernant l'actualité : ${actualite.titre}`
+      }
+    });
+  };
 
   return (
     <div className="actualite-card">
@@ -56,6 +66,14 @@ function ActualiteCard({ actualite }) {
             Photo {indexImage + 1} / {images.length}
           </small>
         )}
+
+        <button
+          type="button"
+          onClick={handleContact}
+          className="actualite-contact-button"
+        >
+          Contacter l'association
+        </button>
       </div>
     </div>
   );

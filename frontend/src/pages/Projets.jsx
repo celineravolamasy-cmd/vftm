@@ -2,7 +2,7 @@
 import API_URL from "../services/api";
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import "./Projets.css";
 
@@ -30,6 +30,7 @@ function getImageUrl(image) {
 function ProjetCard({ projet }) {
   const [indexImage, setIndexImage] = useState(0);
   const [imageErreur, setImageErreur] = useState(false);
+  const navigate = useNavigate();
 
   const images =
     Array.isArray(projet.images) && projet.images.length > 0
@@ -56,6 +57,14 @@ function ProjetCard({ projet }) {
   }, [projet.id, images.length]);
 
   const dateProjet = projet.date || projet.date_projet;
+
+  const handleContact = () => {
+    navigate("/contact", {
+      state: {
+        sujet: `Demande concernant le projet : ${projet.titre}`
+      }
+    });
+  };
 
   return (
     <article className="projet-card">
@@ -99,12 +108,22 @@ function ProjetCard({ projet }) {
 
           <span>VFTM</span>
 
-          <Link
-            to={`/projets/${projet.id}`}
-            className="projet-details-link"
-          >
-            En savoir plus →
-          </Link>
+          <div className="projet-actions">
+            <Link
+              to={`/projets/${projet.id}`}
+              className="projet-details-link"
+            >
+              En savoir plus →
+            </Link>
+
+            <button
+              type="button"
+              className="projet-contact-button"
+              onClick={handleContact}
+            >
+              Contacter
+            </button>
+          </div>
 
         </div>
 

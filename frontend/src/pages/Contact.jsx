@@ -1,6 +1,9 @@
+
 import API_URL from '../services/api';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
 import {
   MapPin,
   Phone,
@@ -10,11 +13,20 @@ import {
 import "./Contact.css";
 
 function Contact() {
+  const location = useLocation();
+
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [sujet, setSujet] = useState("");
   const [message, setMessage] = useState("");
   const [envoi, setEnvoi] = useState(false);
+
+  // Récupérer automatiquement le sujet depuis Actualités ou Projets
+  useEffect(() => {
+    if (location.state?.sujet) {
+      setSujet(location.state.sujet);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,21 +34,18 @@ function Contact() {
     setEnvoi(true);
 
     try {
-      const response = await fetch(
-        `${API_URL}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            nom,
-            email,
-            sujet,
-            message,
-          }),
-        }
-      );
+      const response = await fetch(`${API_URL}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nom,
+          email,
+          sujet,
+          message,
+        }),
+      });
 
       const data = await response.json();
 
@@ -73,7 +82,6 @@ function Contact() {
 
       <div className="contact-container">
 
-        {/* Coordonnées officielles */}
         <div className="contact-info">
           <h2>Nos coordonnées</h2>
 
@@ -82,7 +90,6 @@ function Contact() {
               <MapPin size={22} color="#16a34a" />
               Adresse
             </h3>
-
             <p>
               Près IE Anjoma,
               Fianarantsoa, Madagascar
@@ -94,7 +101,6 @@ function Contact() {
               <Phone size={22} color="#16a34a" />
               Téléphone
             </h3>
-
             <p>
               <a href="tel:+261348684171">
                 034 86 841 71
@@ -107,7 +113,6 @@ function Contact() {
               <Mail size={22} color="#16a34a" />
               Email
             </h3>
-
             <p>
               <a href="mailto:asvftm@gmail.com">
                 asvftm@gmail.com
@@ -116,7 +121,6 @@ function Contact() {
           </div>
         </div>
 
-        {/* Formulaire de contact */}
         <div className="contact-form-container">
           <h2>Envoyer un message</h2>
 
@@ -124,10 +128,7 @@ function Contact() {
             className="contact-form"
             onSubmit={handleSubmit}
           >
-            <label htmlFor="nom">
-              Nom complet
-            </label>
-
+            <label htmlFor="nom">Nom complet</label>
             <input
               id="nom"
               type="text"
@@ -137,10 +138,7 @@ function Contact() {
               required
             />
 
-            <label htmlFor="email">
-              Email
-            </label>
-
+            <label htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
@@ -150,10 +148,7 @@ function Contact() {
               required
             />
 
-            <label htmlFor="sujet">
-              Sujet
-            </label>
-
+            <label htmlFor="sujet">Sujet</label>
             <input
               id="sujet"
               type="text"
@@ -163,10 +158,7 @@ function Contact() {
               required
             />
 
-            <label htmlFor="message">
-              Message
-            </label>
-
+            <label htmlFor="message">Message</label>
             <textarea
               id="message"
               rows="6"

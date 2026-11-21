@@ -1,4 +1,9 @@
 
+import os
+import smtplib
+import logging
+
+from email.message import EmailMessage
 from flask import Blueprint, jsonify, request
 from config import get_connection
 from auth_utils import admin_required
@@ -6,9 +11,58 @@ from auth_utils import admin_required
 
 messages_bp = Blueprint("messages", __name__)
 
+logging.basicConfig(level=logging.INFO)
+
 
 # ==========================
-# Envoyer un message
+# FANDefasana EMAIL
+# ==========================
+
+def envoyer_email(nom, email_client, sujet, message_client):
+
+    smtp_server = os.getenv("SMTP_SERVER")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_login = os.getenv("SMTP_LOGIN")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+
+    expediteur = os.getenv("EMAIL_EXPEDITEUR")
+    destinataire = os.getenv("EMAIL_DESTINATAIRE")
+
+    if not all([
+        smtp_server,
+        smtp_login,
+        smtp_password,
+        expediteur,
+        destinataire
+    ]):
+        raise ValueError("Configuration SMTP incomplète")
+
+    email = EmailMessage()
+
+    email["Subject"] = "Nouveau message depuis le site VFTM"
+    email["From"] = f"VFTM - Site web <{expediteur}>"
+    email["To"] = destinataire
+    email["Reply-To"] = email_client
+
+    email.set_content(f"""
+Vous avez reçu un nouveau message depuis le site web du VFTM.
+
+Nom : {nom}
+Email : {email_client}
+Sujet : {sujet}
+
+Message :
+{message_client}
+""")
+
+    with smtplib.SMTP(smtp_server, smtp_port, timeout=20) as serveur:
+        serveur.starttls()
+        serveur.login(smtp_login, smtp_password)
+        serveur.send_message(email)
+
+
+# ==========================
+# ENVOYER UN MESSAGE
 # ACCES PUBLIC
 # ==========================
 
@@ -22,15 +76,26 @@ def ajouter_message():
     sujet = data.get("sujet")
     message = data.get("message")
 
-    if not nom or not email or not sujet or not message:
+    if not all([
+        isinstance(nom, str) and nom.strip(),
+        isinstance(email, str) and email.strip(),
+        isinstance(sujet, str) and sujet.strip(),
+        isinstance(message, str) and message.strip()
+    ]):
         return jsonify({
             "message": "Tous les champs sont obligatoires"
         }), 400
+
+    nom = nom.strip()
+    email = email.strip()
+    sujet = sujet.strip()
+    message = message.strip()
 
     conn = get_connection()
     cur = conn.cursor()
 
     try:
+        # Enregistrement dans PostgreSQL
         cur.execute("""
             INSERT INTO messages
                 (nom, email, sujet, message)
@@ -44,21 +109,38 @@ def ajouter_message():
 
         conn.commit()
 
-        return jsonify({
-            "message": "Message envoyé avec succès"
-        }), 201
-
     except Exception:
         conn.rollback()
-        raise
+        logging.exception("Erreur lors de l'enregistrement du message")
+
+        return jsonify({
+            "message": "Impossible d'enregistrer votre message."
+        }), 500
 
     finally:
         cur.close()
         conn.close()
 
+    # Envoi de la notification par email
+    try:
+        envoyer_email(nom, email, sujet, message)
+
+        return jsonify({
+            "message": "Votre message a été envoyé avec succès.",
+            "email_envoye": True
+        }), 201
+
+    except Exception:
+        logging.exception("Erreur lors de l'envoi de l'email")
+
+        return jsonify({
+            "message": "Votre message est bien enregistré. Toutefois, la notification par email n'a pas pu être envoyée.",
+            "email_envoye": False
+        }), 201
+
 
 # ==========================
-# Récupérer tous les messages
+# RECUPERER TOUS LES MESSAGES
 # ADMIN UNIQUEMENT
 # ==========================
 
@@ -107,14 +189,11 @@ def get_messages():
 
 
 # ==========================
-# Récupérer un message par ID
+# RECUPERER UN MESSAGE PAR ID
 # ADMIN UNIQUEMENT
 # ==========================
 
-@messages_bp.route(
-    "/messages/<int:id>",
-    methods=["GET"]
-)
+@messages_bp.route("/messages/<int:id>", methods=["GET"])
 @admin_required
 def get_message(id):
 
@@ -159,14 +238,11 @@ def get_message(id):
 
 
 # ==========================
-# Supprimer un message
+# SUPPRIMER UN MESSAGE
 # ADMIN UNIQUEMENT
 # ==========================
 
-@messages_bp.route(
-    "/messages/<int:id>",
-    methods=["DELETE"]
-)
+@messages_bp.route("/messages/<int:id>", methods=["DELETE"])
 @admin_required
 def supprimer_message(id):
 

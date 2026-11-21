@@ -328,3 +328,27 @@
     padding: 18px;
   }
 }
+
+
+.projet-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.projet-contact-button {
+  padding: 9px 16px;
+  background-color: #198754;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.projet-contact-button:hover {
+  background-color: #146c43;
+}
+
