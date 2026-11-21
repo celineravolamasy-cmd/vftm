@@ -1,5 +1,5 @@
 
-import API_URL from '../services/api';
+import API_URL from "../services/api";
 
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -21,7 +21,6 @@ function Contact() {
   const [message, setMessage] = useState("");
   const [envoi, setEnvoi] = useState(false);
 
-  // Récupérer automatiquement le sujet depuis Actualités ou Projets
   useEffect(() => {
     if (location.state?.sujet) {
       setSujet(location.state.sujet);
@@ -50,7 +49,7 @@ function Contact() {
       const data = await response.json();
 
       if (response.ok) {
-        alert("Votre message a été envoyé avec succès !");
+        alert(data.message || "Votre message a été enregistré.");
 
         setNom("");
         setEmail("");
@@ -58,13 +57,14 @@ function Contact() {
         setMessage("");
       } else {
         alert(
-          data.message ||
-          "Erreur lors de l'envoi du message."
+          data.message || "Erreur lors de l'envoi du message."
         );
       }
+
     } catch (error) {
       console.error("Erreur :", error);
       alert("Impossible de contacter le serveur.");
+
     } finally {
       setEnvoi(false);
     }
